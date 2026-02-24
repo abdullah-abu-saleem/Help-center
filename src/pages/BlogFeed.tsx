@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Layout } from '../components/Layout';
+import { useI18n } from '../lib/i18n';
 import { blogStore } from '../lib/blog';
 import { useDataRefresh } from '../lib/dataEvents';
 import type { BlogPost } from '../types';
@@ -26,7 +27,12 @@ const ALL_TOPICS = ['teaching', 'parents', 'ai', 'technology', 'getting-started'
 
 // ─── Post card ──────────────────────────────────────────────────────────────
 
-const PostCard: React.FC<{ post: BlogPost }> = ({ post }) => (
+const PostCard: React.FC<{ post: BlogPost }> = ({ post }) => {
+  const { localize } = useI18n();
+  const postTitle = localize(post, 'title') || post.title;
+  const postExcerpt = localize(post, 'excerpt') || post.excerpt;
+
+  return (
   <Link
     to={`/blog/${post.id}`}
     className="group block bg-white rounded-2xl border border-slate-100 overflow-hidden transition-all duration-200 hover:shadow-lg hover:border-slate-200 hover:-translate-y-0.5"
@@ -49,11 +55,11 @@ const PostCard: React.FC<{ post: BlogPost }> = ({ post }) => (
 
       {/* Title */}
       <h2 className="text-lg font-bold text-slate-900 group-hover:text-[#ED3B91] transition-colors duration-200 mb-2 leading-snug">
-        {post.title}
+        {postTitle}
       </h2>
 
       {/* Excerpt */}
-      {post.excerpt && (
+      {postExcerpt && (
         <p
           className="text-sm leading-relaxed mb-4"
           style={{
@@ -64,7 +70,7 @@ const PostCard: React.FC<{ post: BlogPost }> = ({ post }) => (
             overflow: 'hidden',
           }}
         >
-          {post.excerpt}
+          {postExcerpt}
         </p>
       )}
 
@@ -112,11 +118,13 @@ const PostCard: React.FC<{ post: BlogPost }> = ({ post }) => (
       </div>
     </div>
   </Link>
-);
+  );
+};
 
 // ─── Staff Picks (right rail) ───────────────────────────────────────────────
 
 const StaffPicks: React.FC<{ posts: BlogPost[] }> = ({ posts }) => {
+  const { localize } = useI18n();
   const top = posts
     .slice()
     .sort((a, b) => b.likes - a.likes)
@@ -134,7 +142,7 @@ const StaffPicks: React.FC<{ posts: BlogPost[] }> = ({ posts }) => {
         {top.map((post) => (
           <Link key={post.id} to={`/blog/${post.id}`} className="group block">
             <h4 className="text-sm font-semibold text-slate-800 group-hover:text-[#ED3B91] transition-colors leading-snug mb-1">
-              {post.title}
+              {localize(post, 'title') || post.title}
             </h4>
             <p className="text-xs text-slate-400">
               {post.authorName} · {formatDate(post.publishedAt)}

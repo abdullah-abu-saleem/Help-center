@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { clearCmsSession } from '../../lib/adminCms';
 import { supabase } from '../../lib/supabase';
 import {
   adminGetAllSections,
   adminGetAllCategories,
   adminDeleteSection,
+  isSessionError,
   type HcSectionWithCategory,
   type HcCategory,
 } from '../../lib/helpCenterApi';
@@ -69,12 +69,15 @@ export default function AdminSectionListAll() {
       setSuccessMsg('Section deleted successfully!');
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err: any) {
+      if (isSessionError(err)) {
+        navigate('/admin/login', { replace: true });
+        return;
+      }
       setError(err.message || 'Failed to delete section.');
     }
   };
 
   const handleLogout = async () => {
-    clearCmsSession();
     try { await supabase.auth.signOut(); } catch {}
     navigate('/admin/login', { replace: true });
   };

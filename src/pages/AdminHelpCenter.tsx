@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { clearCmsSession } from '../lib/adminCms';
 import { supabase } from '../lib/supabase';
 import {
   adminGetAllCategories,
@@ -42,7 +41,6 @@ export default function AdminHelpCenter() {
   };
 
   const handleLogout = async () => {
-    clearCmsSession();
     try { await supabase.auth.signOut(); } catch {}
     navigate('/admin/login', { replace: true });
   };

@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase, safeGetSession } from './supabase';
 import { emitDataChange } from './dataEvents';
 import { BlogPost, BlogComment, BlogLike } from '../types';
 import type { TeacherUser, UserRole } from './auth';
@@ -55,9 +55,12 @@ function handleSupabaseError(error: any): never {
 interface BlogPostRow {
   id: string;
   title: string;
+  title_ar: string | null;
   slug: string;
   content: string;
+  content_ar: string | null;
   excerpt: string | null;
+  excerpt_ar: string | null;
   author_id: string;
   is_published: boolean;
   published_at: string | null;
@@ -69,8 +72,11 @@ function mapRow(row: BlogPostRow): BlogPost {
   return {
     id: row.id,
     title: row.title,
+    title_ar: row.title_ar ?? undefined,
     excerpt: row.excerpt ?? undefined,
+    excerpt_ar: row.excerpt_ar ?? undefined,
     body: row.content,
+    body_ar: row.content_ar ?? undefined,
     authorId: row.author_id,
     authorName: '', // no author_name column; populated client-side if needed
     publishedAt: row.published_at ?? row.created_at,
@@ -92,6 +98,36 @@ function requireBlogWriter(user: TeacherUser | null): asserts user is TeacherUse
   if (!BLOG_WRITE_ROLES.includes(user.role)) {
     throw new BlogAuthError('Forbidden: teacher or admin role required', 403);
   }
+}
+
+async function requireSession() {
+  // Step 1: try reading the existing session from memory/storage
+  const { data, error } = await safeGetSession();
+  if (error) throw error;
+
+  if (data.session) {
+    if (import.meta.env.DEV) {
+      console.log('[blogStore] Session OK — user:', data.session.user.id);
+    }
+    return data.session;
+  }
+
+  // Step 2: session is null — attempt a token refresh before giving up
+  console.warn('[blogStore] No session from getSession, attempting refreshSession…');
+  const { data: refreshData, error: refreshErr } = await supabase.auth.refreshSession();
+  if (refreshErr) {
+    console.error('[blogStore] refreshSession failed:', refreshErr.message);
+    throw new BlogAuthError('No active session. Please sign in again.', 401);
+  }
+  if (!refreshData.session) {
+    console.error('[blogStore] refreshSession returned no session');
+    throw new BlogAuthError('No active session. Please sign in again.', 401);
+  }
+
+  if (import.meta.env.DEV) {
+    console.log('[blogStore] Session recovered via refresh — user:', refreshData.session.user.id);
+  }
+  return refreshData.session;
 }
 
 // ─── Comment / Like helpers (still localStorage) ────────────────────────────
@@ -143,6 +179,7 @@ export const blogStore = {
   // ── Post CRUD (Supabase) ─────────────────────────────────
 
   async getAll(): Promise<BlogPost[]> {
+    await requireSession();
     console.log('[blogStore.getAll] Fetching all posts...');
     const { data, error } = await supabase
       .from('blog_posts')
@@ -165,6 +202,7 @@ export const blogStore = {
 
   async getDrafts(user: TeacherUser | null): Promise<BlogPost[]> {
     if (!user || !BLOG_WRITE_ROLES.includes(user.role)) return [];
+    await requireSession();
     let query = supabase.from('blog_posts').select('*').eq('is_published', false);
     if (user.role !== 'admin') query = query.eq('author_id', user.id);
     const { data, error } = await query.order('updated_at', { ascending: false });
@@ -199,11 +237,12 @@ export const blogStore = {
     post: Omit<BlogPost, 'id' | 'likes' | 'comments' | 'authorId' | 'authorName'>,
   ): Promise<BlogPost> {
     requireBlogWriter(user);
+    await requireSession();
 
     const isPublishing = post.status === 'published';
     const slug = generateSlug(post.title) || `post-${Date.now()}`;
 
-    const payload = {
+    const payload: Record<string, unknown> = {
       title: post.title.trim(),
       slug,
       content: post.body.trim(),
@@ -214,6 +253,9 @@ export const blogStore = {
         ? (post.publishedAt || new Date().toISOString())
         : null,
     };
+    if (post.title_ar !== undefined) payload.title_ar = post.title_ar?.trim() || null;
+    if (post.body_ar !== undefined) payload.content_ar = post.body_ar?.trim() || null;
+    if (post.excerpt_ar !== undefined) payload.excerpt_ar = post.excerpt_ar?.trim() || null;
 
     console.log('[blogStore.create] Payload:', payload);
 
@@ -235,6 +277,7 @@ export const blogStore = {
     updates: Partial<Omit<BlogPost, 'id' | 'authorId' | 'authorName'>>,
   ): Promise<BlogPost | null> {
     requireBlogWriter(user);
+    await requireSession();
 
     const payload: Record<string, unknown> = {};
     if (updates.title !== undefined) {
@@ -245,6 +288,9 @@ export const blogStore = {
     if (updates.body !== undefined) payload.content = updates.body.trim();
     if (updates.status !== undefined) payload.is_published = updates.status === 'published';
     if (updates.publishedAt !== undefined) payload.published_at = updates.publishedAt;
+    if (updates.title_ar !== undefined) payload.title_ar = updates.title_ar?.trim() || null;
+    if (updates.body_ar !== undefined) payload.content_ar = updates.body_ar?.trim() || null;
+    if (updates.excerpt_ar !== undefined) payload.excerpt_ar = updates.excerpt_ar?.trim() || null;
 
     console.log('[blogStore.update] id:', id, 'payload:', payload);
 
@@ -263,6 +309,7 @@ export const blogStore = {
 
   async remove(user: TeacherUser | null, id: string): Promise<boolean> {
     requireBlogWriter(user);
+    await requireSession();
     console.log('[blogStore.remove] id:', id);
     const { error } = await supabase.from('blog_posts').delete().eq('id', id);
     if (error) handleSupabaseError(error);

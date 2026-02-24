@@ -5,6 +5,7 @@ import {
   adminGetAllCategories,
   adminCreateSection,
   adminUpdateSection,
+  isSessionError,
   type HcCategory,
 } from '../../lib/helpCenterApi';
 
@@ -103,6 +104,10 @@ export default function AdminSectionEditorFlat() {
         navigate('/admin/help-center/sections?success=updated');
       }
     } catch (err: any) {
+      if (isSessionError(err)) {
+        navigate('/admin/login', { replace: true });
+        return;
+      }
       setError(err.message || 'Failed to save section.');
     } finally {
       setSaving(false);

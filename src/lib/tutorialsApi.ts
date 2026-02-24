@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase, safeGetSession } from './supabase';
 import { emitDataChange } from './dataEvents';
 import type { Tutorial } from '../types';
 
@@ -50,7 +50,38 @@ export async function getPublishedTutorials(): Promise<Tutorial[]> {
    Admin CRUD (RLS: profiles.role = 'admin')
    ═══════════════════════════════════════════════════ */
 
+async function requireSession() {
+  // Step 1: try reading the existing session from memory/storage
+  const { data, error } = await safeGetSession();
+  if (error) throw error;
+
+  if (data.session) {
+    if (import.meta.env.DEV) {
+      console.log('[tutorialsApi] Session OK — user:', data.session.user.id);
+    }
+    return data.session;
+  }
+
+  // Step 2: session is null — attempt a token refresh before giving up
+  console.warn('[tutorialsApi] No session from getSession, attempting refreshSession…');
+  const { data: refreshData, error: refreshErr } = await supabase.auth.refreshSession();
+  if (refreshErr) {
+    console.error('[tutorialsApi] refreshSession failed:', refreshErr.message);
+    throw new Error('No active session. Please sign in again.');
+  }
+  if (!refreshData.session) {
+    console.error('[tutorialsApi] refreshSession returned no session');
+    throw new Error('No active session. Please sign in again.');
+  }
+
+  if (import.meta.env.DEV) {
+    console.log('[tutorialsApi] Session recovered via refresh — user:', refreshData.session.user.id);
+  }
+  return refreshData.session;
+}
+
 export async function adminGetAllTutorials(): Promise<Tutorial[]> {
+  await requireSession();
   console.log('[tutorialsApi] adminGetAllTutorials — fetching all tutorials (no filter)…');
 
   const { data, error, status, statusText } = await supabase
@@ -76,6 +107,7 @@ export async function adminGetAllTutorials(): Promise<Tutorial[]> {
 }
 
 export async function adminGetTutorial(id: string): Promise<Tutorial> {
+  await requireSession();
   const { data, error } = await supabase
     .from('tutorials')
     .select('*')
@@ -88,7 +120,9 @@ export async function adminGetTutorial(id: string): Promise<Tutorial> {
 
 export interface TutorialInput {
   title: string;
+  title_ar?: string | null;
   description?: string | null;
+  description_ar?: string | null;
   youtube_url: string;
   thumbnail_url?: string | null;
   sort_order?: number;
@@ -96,12 +130,15 @@ export interface TutorialInput {
 }
 
 export async function adminCreateTutorial(input: TutorialInput): Promise<Tutorial> {
+  await requireSession();
   const videoId = extractYouTubeId(input.youtube_url);
   const thumbnail = input.thumbnail_url?.trim() || (videoId ? youTubeThumbnail(videoId) : null);
 
   const payload = {
     title: input.title,
+    title_ar: input.title_ar?.trim() || null,
     description: input.description || null,
+    description_ar: input.description_ar?.trim() || null,
     youtube_url: input.youtube_url,
     thumbnail_url: thumbnail,
     sort_order: input.sort_order ?? 0,
@@ -127,12 +164,15 @@ export async function adminCreateTutorial(input: TutorialInput): Promise<Tutoria
 }
 
 export async function adminUpdateTutorial(id: string, input: TutorialInput): Promise<Tutorial> {
+  await requireSession();
   const videoId = extractYouTubeId(input.youtube_url);
   const thumbnail = input.thumbnail_url?.trim() || (videoId ? youTubeThumbnail(videoId) : null);
 
   const payload = {
     title: input.title,
+    title_ar: input.title_ar?.trim() || null,
     description: input.description || null,
+    description_ar: input.description_ar?.trim() || null,
     youtube_url: input.youtube_url,
     thumbnail_url: thumbnail,
     sort_order: input.sort_order ?? 0,
@@ -160,6 +200,7 @@ export async function adminUpdateTutorial(id: string, input: TutorialInput): Pro
 }
 
 export async function adminDeleteTutorial(id: string): Promise<void> {
+  await requireSession();
   const { error } = await supabase.from('tutorials').delete().eq('id', id);
   if (error) throw error;
   emitDataChange('tutorials');

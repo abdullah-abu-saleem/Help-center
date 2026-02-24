@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { clearCmsSession } from '../../lib/adminCms';
 import {
   adminGetAllTutorials,
   adminCreateTutorial,
@@ -18,7 +17,9 @@ import type { Tutorial } from '../../types';
 
 const emptyForm: TutorialInput & { id?: string } = {
   title: '',
+  title_ar: '',
   description: '',
+  description_ar: '',
   youtube_url: '',
   thumbnail_url: '',
   sort_order: 0,
@@ -40,21 +41,39 @@ export default function AdminTutorials() {
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // ── Fetch tutorials ──
+  // ── Fetch tutorials (retries once if session not yet hydrated) ──
   useEffect(() => {
-    adminGetAllTutorials()
-      .then((rows) => {
-        console.log('[AdminTutorials] Loaded', rows.length, 'tutorials');
-        setTutorials(rows);
-      })
-      .catch((err) => {
-        console.error('[AdminTutorials] Fetch failed:', err);
-        const msg = err?.message || 'Failed to load tutorials.';
-        const hint = err?.hint ? ` Hint: ${err.hint}` : '';
-        const code = err?.code ? ` (code ${err.code})` : '';
-        setError(`${msg}${code}${hint}`);
-      })
-      .finally(() => setLoading(false));
+    let cancelled = false;
+    let retried = false;
+
+    const load = () => {
+      adminGetAllTutorials()
+        .then((rows) => {
+          if (cancelled) return;
+          console.log('[AdminTutorials] Loaded', rows.length, 'tutorials');
+          setTutorials(rows);
+          setLoading(false);
+        })
+        .catch((err) => {
+          if (cancelled) return;
+          // Retry once after 1.5 s if the session wasn't ready yet
+          if (!retried && /no active session/i.test(err?.message || '')) {
+            retried = true;
+            console.warn('[AdminTutorials] Session not ready, retrying in 1.5 s…');
+            setTimeout(() => { if (!cancelled) load(); }, 1500);
+            return;
+          }
+          console.error('[AdminTutorials] Fetch failed:', err);
+          const msg = err?.message || 'Failed to load tutorials.';
+          const hint = err?.hint ? ` Hint: ${err.hint}` : '';
+          const code = err?.code ? ` (code ${err.code})` : '';
+          setError(`${msg}${code}${hint}`);
+          setLoading(false);
+        });
+    };
+
+    load();
+    return () => { cancelled = true; };
   }, []);
 
   // ── Auto-dismiss success ──
@@ -65,7 +84,6 @@ export default function AdminTutorials() {
   }, [successMsg]);
 
   const handleLogout = async () => {
-    clearCmsSession();
     try { await supabase.auth.signOut(); } catch {}
     navigate('/admin/login', { replace: true });
   };
@@ -81,7 +99,9 @@ export default function AdminTutorials() {
     setForm({
       id: t.id,
       title: t.title,
+      title_ar: t.title_ar ?? '',
       description: t.description ?? '',
+      description_ar: t.description_ar ?? '',
       youtube_url: t.youtube_url,
       thumbnail_url: t.thumbnail_url ?? '',
       sort_order: t.sort_order,
@@ -105,9 +125,11 @@ export default function AdminTutorials() {
 
     setSaving(true);
     try {
-      const payload = {
+      const payload: TutorialInput = {
         title: form.title,
+        title_ar: form.title_ar,
         description: form.description,
+        description_ar: form.description_ar,
         youtube_url: form.youtube_url,
         thumbnail_url: form.thumbnail_url,
         sort_order: form.sort_order,
@@ -151,7 +173,9 @@ export default function AdminTutorials() {
     try {
       const updated = await adminUpdateTutorial(t.id, {
         title: t.title,
+        title_ar: t.title_ar,
         description: t.description,
+        description_ar: t.description_ar,
         youtube_url: t.youtube_url,
         thumbnail_url: t.thumbnail_url,
         sort_order: t.sort_order,
@@ -359,10 +383,10 @@ export default function AdminTutorials() {
                 </div>
               )}
 
-              {/* Title */}
+              {/* Title (EN) */}
               <label className="block mb-4">
                 <span className="text-sm font-medium text-slate-700">
-                  Title <span className="text-red-400">*</span>
+                  Title (EN) <span className="text-red-400">*</span>
                 </span>
                 <input
                   type="text"
@@ -373,15 +397,41 @@ export default function AdminTutorials() {
                 />
               </label>
 
-              {/* Description */}
+              {/* Title (AR) */}
               <label className="block mb-4">
-                <span className="text-sm font-medium text-slate-700">Description</span>
+                <span className="text-sm font-medium text-slate-700">Title (AR)</span>
+                <input
+                  type="text"
+                  dir="rtl"
+                  value={form.title_ar ?? ''}
+                  onChange={(e) => setForm((f) => ({ ...f, title_ar: e.target.value }))}
+                  className="mt-1 w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all"
+                  placeholder="مثال: إنشاء فصلك الأول"
+                />
+              </label>
+
+              {/* Description (EN) */}
+              <label className="block mb-4">
+                <span className="text-sm font-medium text-slate-700">Description (EN)</span>
                 <textarea
                   rows={2}
                   value={form.description ?? ''}
                   onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                   className="mt-1 w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all resize-none"
                   placeholder="Brief description of the tutorial"
+                />
+              </label>
+
+              {/* Description (AR) */}
+              <label className="block mb-4">
+                <span className="text-sm font-medium text-slate-700">Description (AR)</span>
+                <textarea
+                  rows={2}
+                  dir="rtl"
+                  value={form.description_ar ?? ''}
+                  onChange={(e) => setForm((f) => ({ ...f, description_ar: e.target.value }))}
+                  className="mt-1 w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all resize-none"
+                  placeholder="وصف مختصر للدرس"
                 />
               </label>
 

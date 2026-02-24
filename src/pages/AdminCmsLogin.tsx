@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { supabase, testSupabaseConnection, isLockError, recoverFromLockError } from '../lib/supabase';
-import { setCmsAuthenticated, clearCmsSession } from '../lib/adminCms';
 import { useAuth } from '../lib/auth';
 
 // ── Sign-in helpers ───────────────────────────────────────────────────────
@@ -60,7 +59,6 @@ export default function AdminCmsLogin() {
     if (authLoading) return; // still hydrating — wait
 
     if (isAdmin) {
-      setCmsAuthenticated();
       navigate(redirectTo, { replace: true });
       return;
     }
@@ -90,7 +88,6 @@ export default function AdminCmsLogin() {
   };
 
   const handleSignOut = async () => {
-    clearCmsSession();
     try { await supabase.auth.signOut(); } catch {}
     setAccessDenied(false);
     setDeniedEmail('');
@@ -226,7 +223,6 @@ export default function AdminCmsLogin() {
       // ── Step 5: Admin verified → navigate ──
       setStatusMsg('Redirecting…');
       console.log('[AdminLogin] Admin verified → navigating to', redirectTo);
-      setCmsAuthenticated();
       navigate(redirectTo, { replace: true });
 
     } catch (err: unknown) {

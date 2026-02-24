@@ -49,7 +49,8 @@ if (import.meta.env.DEV) {
 // Old sb-* keys from previous sessions cause LockManager conflicts.
 // Runs ONCE per tab session (guarded by sessionStorage flag).
 
-const STORAGE_KEY = 'string-auth';
+const STORAGE_KEY = 'string-supabase-auth';
+const OLD_STORAGE_KEY = 'string-auth';
 const CLEANUP_FLAG = 'string-sb-cleaned';
 
 function clearStaleSupabaseKeys() {
@@ -61,6 +62,10 @@ function clearStaleSupabaseKeys() {
       if (key && key.startsWith('sb-')) {
         keysToRemove.push(key);
       }
+    }
+    // Also clear orphaned session from old storageKey
+    if (localStorage.getItem(OLD_STORAGE_KEY)) {
+      keysToRemove.push(OLD_STORAGE_KEY);
     }
     for (const key of keysToRemove) {
       localStorage.removeItem(key);
@@ -89,8 +94,8 @@ function getOrCreateClient(): SupabaseClient {
   const client = createClient(supabaseUrl!, supabaseKey!, {
     auth: {
       persistSession: true,
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
       flowType: 'pkce',
       storageKey: STORAGE_KEY,
     },
@@ -238,28 +243,40 @@ export async function testSupabaseConnection(): Promise<ConnCheckResult> {
 
 const RELOAD_FLAG = 'string-auth-recovery-reload';
 
-/** True if the error message indicates a Navigator LockManager conflict. */
+/**
+ * True if the error is specifically a Navigator LockManager conflict.
+ * Previous version matched any error with "lock" or "navigator" — way too broad,
+ * which caused false positives and unnecessary session wipes.
+ */
 export function isLockError(err: unknown): boolean {
   const msg = ((err as any)?.message || '').toLowerCase();
-  return msg.includes('lock') || msg.includes('navigator');
+  return (
+    msg.includes('navigator.locks') ||
+    msg.includes('lockmanager') ||
+    (msg.includes('lock') && (msg.includes('acquired') || msg.includes('request')))
+  );
 }
 
 /**
- * Clear all Supabase auth state and reload once.
- * Guarded by sessionStorage flag to prevent infinite reload loops.
+ * Recover from a LockManager conflict by clearing stale keys and reloading.
+ *
+ * IMPORTANT: Does NOT clear the active session (STORAGE_KEY) on first attempt.
+ * The lock error is about concurrent access, not a corrupted session.
+ * Only clears the session on a second consecutive failure (RELOAD_FLAG guard).
  */
 export function recoverFromLockError(): void {
   if (sessionStorage.getItem(RELOAD_FLAG)) {
-    // Already tried once — don't loop. Clear the flag so next tab load can try.
+    // Second failure — clear everything as last resort, then stop looping
     sessionStorage.removeItem(RELOAD_FLAG);
+    try { localStorage.removeItem(STORAGE_KEY); } catch {}
+    try { localStorage.removeItem(OLD_STORAGE_KEY); } catch {}
     return;
   }
-  console.error('[Supabase] LockManager error — clearing auth state and reloading');
+  console.error('[Supabase] LockManager error — clearing stale keys and reloading');
   sessionStorage.setItem(RELOAD_FLAG, '1');
-  // Force a fresh cleanup on next load
   try { sessionStorage.removeItem(CLEANUP_FLAG); } catch {}
-  try { localStorage.removeItem(STORAGE_KEY); } catch {}
-  // Remove any sb-* keys that might hold stale locks
+  // Only remove stale sb-* keys — keep the active session intact
+  try { localStorage.removeItem(OLD_STORAGE_KEY); } catch {}
   try {
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const key = localStorage.key(i);

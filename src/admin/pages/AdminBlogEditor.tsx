@@ -55,7 +55,9 @@ export default function AdminBlogEditor() {
   const [existing, setExisting] = useState<import('../../types').BlogPost | undefined>(undefined);
   const [loadingPost, setLoadingPost] = useState(!!id);
   const [title, setTitle] = useState('');
+  const [titleAr, setTitleAr] = useState('');
   const [body, setBody] = useState('');
+  const [bodyAr, setBodyAr] = useState('');
   const [status, setStatus] = useState<'draft' | 'published'>('draft');
   const [preview, setPreview] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -63,6 +65,7 @@ export default function AdminBlogEditor() {
   const [contentError, setContentError] = useState(false);
   const [draftRestored, setDraftRestored] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [activeLang, setActiveLang] = useState<'en' | 'ar'>('en');
 
   const initialised = useRef(false);
 
@@ -77,7 +80,9 @@ export default function AdminBlogEditor() {
         setExisting(post);
         if (post) {
           setTitle(post.title);
+          setTitleAr(post.title_ar || '');
           setBody(post.body);
+          setBodyAr(post.body_ar || '');
           setStatus(post.status);
         }
       } catch {
@@ -160,11 +165,15 @@ export default function AdminBlogEditor() {
 
       const cleanBody = sanitizeHtml(body.trim());
 
+      const cleanBodyAr = sanitizeHtml(bodyAr.trim());
+
       try {
         if (isEditing && id) {
           await blogStore.update(user, id, {
             title: title.trim(),
+            title_ar: titleAr.trim() || undefined,
             body: cleanBody,
+            body_ar: cleanBodyAr || undefined,
             status: asStatus,
             publishedAt:
               asStatus === 'published' && existing?.status === 'draft'
@@ -177,7 +186,9 @@ export default function AdminBlogEditor() {
         } else {
           await blogStore.create(user, {
             title: title.trim(),
+            title_ar: titleAr.trim() || undefined,
             body: cleanBody,
+            body_ar: cleanBodyAr || undefined,
             publishedAt: new Date().toISOString(),
             status: asStatus,
           });
@@ -190,10 +201,11 @@ export default function AdminBlogEditor() {
           ? 'Access denied – admin required'
           : (e.message || 'Failed to save post');
         setSaveError(msg);
+      } finally {
         setSaving(false);
       }
     },
-    [user, title, body, isEditing, id, existing, navigate],
+    [user, title, titleAr, body, bodyAr, isEditing, id, existing, navigate],
   );
 
   // Loading state while fetching existing post
@@ -294,46 +306,96 @@ export default function AdminBlogEditor() {
           </div>
         ) : (
           <div className="space-y-6">
-            {/* Title */}
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                Post Title <span style={{ color: '#ED3B91' }}>*</span>
-              </label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => { setTitle(e.target.value); if (titleError) setTitleError(false); }}
-                placeholder="Enter a clear and descriptive title"
-                className={`w-full text-lg font-semibold placeholder-slate-400 rounded-xl px-3.5 py-2.5 border outline-none transition-all ${
-                  titleError
-                    ? 'border-red-400 focus:ring-2 focus:ring-red-200 focus:border-red-400'
-                    : 'border-slate-200 focus:ring-2 focus:ring-[#ED3B91]/30 focus:border-[#ED3B91]'
-                }`}
-                style={{ lineHeight: 1.3, background: '#FFFFFF', color: '#111827', fontSize: '18px' }}
-              />
-              {titleError && (
-                <p className="mt-1.5 text-xs text-red-500">Post title is required</p>
-              )}
+            {/* Language tabs */}
+            <div className="flex items-center gap-2">
+              {(['en', 'ar'] as const).map((lang) => (
+                <button
+                  key={lang}
+                  onClick={() => setActiveLang(lang)}
+                  className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                    activeLang === lang
+                      ? 'bg-pink-100 text-pink-700'
+                      : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                  }`}
+                >
+                  {lang === 'en' ? 'English' : 'العربية'}
+                </button>
+              ))}
             </div>
 
-            {/* Body (TipTap) */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-                Content <span style={{ color: '#ED3B91' }}>*</span>
-              </label>
-              <RichTextEditor
-                value={body}
-                onChange={(html) => {
-                  setBody(html);
-                  if (contentError) setContentError(false);
-                }}
-                placeholder="Start writing your post..."
-                editable
-              />
-              {contentError && (
-                <p className="mt-1.5 text-xs text-red-500">Post content is required</p>
-              )}
-            </div>
+            {/* English fields */}
+            {activeLang === 'en' && (
+              <>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                    Post Title (EN) <span style={{ color: '#ED3B91' }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={(e) => { setTitle(e.target.value); if (titleError) setTitleError(false); }}
+                    placeholder="Enter a clear and descriptive title"
+                    className={`w-full text-lg font-semibold placeholder-slate-400 rounded-xl px-3.5 py-2.5 border outline-none transition-all ${
+                      titleError
+                        ? 'border-red-400 focus:ring-2 focus:ring-red-200 focus:border-red-400'
+                        : 'border-slate-200 focus:ring-2 focus:ring-[#ED3B91]/30 focus:border-[#ED3B91]'
+                    }`}
+                    style={{ lineHeight: 1.3, background: '#FFFFFF', color: '#111827', fontSize: '18px' }}
+                  />
+                  {titleError && (
+                    <p className="mt-1.5 text-xs text-red-500">Post title is required</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                    Content (EN) <span style={{ color: '#ED3B91' }}>*</span>
+                  </label>
+                  <RichTextEditor
+                    value={body}
+                    onChange={(html) => {
+                      setBody(html);
+                      if (contentError) setContentError(false);
+                    }}
+                    placeholder="Start writing your post..."
+                    editable
+                  />
+                  {contentError && (
+                    <p className="mt-1.5 text-xs text-red-500">Post content is required</p>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* Arabic fields */}
+            {activeLang === 'ar' && (
+              <>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                    Post Title (AR)
+                  </label>
+                  <input
+                    type="text"
+                    dir="rtl"
+                    value={titleAr}
+                    onChange={(e) => setTitleAr(e.target.value)}
+                    placeholder="أدخل عنوان المقال"
+                    className="w-full text-lg font-semibold placeholder-slate-400 rounded-xl px-3.5 py-2.5 border border-slate-200 outline-none transition-all focus:ring-2 focus:ring-[#ED3B91]/30 focus:border-[#ED3B91]"
+                    style={{ lineHeight: 1.3, background: '#FFFFFF', color: '#111827', fontSize: '18px' }}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                    Content (AR)
+                  </label>
+                  <RichTextEditor
+                    value={bodyAr}
+                    onChange={(html) => setBodyAr(html)}
+                    placeholder="ابدأ الكتابة..."
+                    editable
+                  />
+                </div>
+              </>
+            )}
           </div>
         )}
 

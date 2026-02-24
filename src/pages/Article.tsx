@@ -56,8 +56,8 @@ export default function ArticlePage() {
       const s = getSectionById(article.sectionId);
       setSection(s);
       if (s) {
-        setCategory(getCategoryById(s.categoryId));
         setSectionGroups(getGroupsBySectionId(s.id));
+        setCategory(getCategoryById(s.categoryId));
       }
     }
   }, [article]);

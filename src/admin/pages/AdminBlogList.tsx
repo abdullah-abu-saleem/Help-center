@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../lib/auth';
 import { blogStore } from '../../lib/blog';
-import { clearCmsSession } from '../../lib/adminCms';
 import { supabase } from '../../lib/supabase';
 import type { BlogPost } from '../../types';
 
@@ -70,7 +69,6 @@ export default function AdminBlogList() {
   };
 
   const handleLogout = async () => {
-    clearCmsSession();
     try { await supabase.auth.signOut(); } catch {}
     navigate('/admin/login', { replace: true });
   };

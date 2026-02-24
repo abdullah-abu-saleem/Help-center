@@ -2,7 +2,9 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { useAuth } from '../lib/auth';
+import { useI18n } from '../lib/i18n';
 import { blogStore, BlogAuthError } from '../lib/blog';
+import { useDataRefresh } from '../lib/dataEvents';
 import type { BlogComment } from '../types';
 
 // ─── Sanitize HTML to prevent XSS ───────────────────────────────────────────
@@ -79,6 +81,7 @@ const CommentItem: React.FC<{
 export default function BlogPostDetail() {
   const { postId } = useParams<{ postId: string }>();
   const { user } = useAuth();
+  const { localize } = useI18n();
 
   const [post, setPost] = useState<import('../types').BlogPost | undefined>(undefined);
   const [loading, setLoading] = useState(true);
@@ -87,27 +90,23 @@ export default function BlogPostDetail() {
   const [likeCount, setLikeCount] = useState(0);
 
   // ── Fetch post from Supabase ──
-  useEffect(() => {
+  const fetchPost = useCallback(() => {
     if (!postId) { setLoading(false); return; }
-    let cancelled = false;
-    (async () => {
-      try {
-        const data = await blogStore.getById(postId);
-        if (cancelled) return;
+    blogStore.getById(postId)
+      .then((data) => {
         setPost(data);
         if (data) {
           setLikeCount(data.likes);
           setComments(blogStore.getComments(postId));
           if (user) setLiked(blogStore.hasUserLiked(postId, user.id));
         }
-      } catch {
-        // leave post undefined → "not found" UI
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, [postId, user]);
+
+  useEffect(() => { fetchPost(); }, [fetchPost]);
+  useDataRefresh(['blog_posts'], fetchPost);
   const [commentText, setCommentText] = useState('');
 
   const mins = useMemo(() => (post ? readingTime(post.body) : 0), [post]);
@@ -241,7 +240,7 @@ export default function BlogPostDetail() {
 
           {/* Title */}
           <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4 leading-tight">
-            {post.title}
+            {localize(post, 'title') || post.title}
           </h1>
 
           {/* Meta row */}
@@ -267,7 +266,7 @@ export default function BlogPostDetail() {
         {/* Post content */}
         <div
           className="blog-prose"
-          dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.body) }}
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(localize(post, 'body') || post.body) }}
         />
 
         {/* ── Engagement bar ── */}

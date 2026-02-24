@@ -7,8 +7,17 @@
  * Admin writes require an authenticated admin user session (RLS enforced).
  */
 
-import { supabase } from './supabase';
+import { supabase, safeGetSession } from './supabase';
 import { emitDataChange } from './dataEvents';
+
+/**
+ * Returns true when an error message indicates the session has expired
+ * or is invalid. Admin pages should redirect to /admin/login when this is true.
+ */
+export function isSessionError(err: unknown): boolean {
+  const msg = ((err as any)?.message || '').toLowerCase();
+  return msg.includes('session') || msg.includes('sign in') || msg.includes('jwt');
+}
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -157,6 +166,7 @@ export async function getHcArticleBySlug(slug: string): Promise<HcArticleWithSec
 
 /** Fetch ALL categories for the admin panel (includes inactive). */
 export async function adminGetAllCategories(): Promise<HcCategory[]> {
+  await requireSession();
   const { data, error } = await supabase
     .from('hc_categories')
     .select('*')
@@ -168,6 +178,7 @@ export async function adminGetAllCategories(): Promise<HcCategory[]> {
 
 /** Fetch ALL sections with category info (admin). */
 export async function adminGetAllSections(): Promise<HcSectionWithCategory[]> {
+  await requireSession();
   const { data, error } = await supabase
     .from('hc_sections')
     .select('*, hc_categories(slug, title, title_ar)')
@@ -179,6 +190,7 @@ export async function adminGetAllSections(): Promise<HcSectionWithCategory[]> {
 
 /** Fetch ALL sections for a category (admin, includes inactive). */
 export async function adminGetSectionsByCategory(categoryId: string): Promise<HcSection[]> {
+  await requireSession();
   const { data, error } = await supabase
     .from('hc_sections')
     .select('*')
@@ -191,6 +203,7 @@ export async function adminGetSectionsByCategory(categoryId: string): Promise<Hc
 
 /** Fetch a single section by ID (admin). */
 export async function adminGetSectionById(id: string): Promise<HcSectionWithCategory | null> {
+  await requireSession();
   const { data, error } = await supabase
     .from('hc_sections')
     .select('*, hc_categories(slug, title, title_ar)')
@@ -203,6 +216,7 @@ export async function adminGetSectionById(id: string): Promise<HcSectionWithCate
 
 /** Fetch ALL articles across all sections (admin). */
 export async function adminGetAllArticles(): Promise<HcArticleWithSection[]> {
+  await requireSession();
   const { data, error } = await supabase
     .from('hc_articles')
     .select('*, hc_sections(slug, title, title_ar, hc_categories(slug, title, title_ar))')
@@ -214,6 +228,7 @@ export async function adminGetAllArticles(): Promise<HcArticleWithSection[]> {
 
 /** Fetch ALL articles for a section (admin, includes drafts). */
 export async function adminGetArticlesBySection(sectionId: string): Promise<HcArticle[]> {
+  await requireSession();
   const { data, error } = await supabase
     .from('hc_articles')
     .select('*')
@@ -226,6 +241,7 @@ export async function adminGetArticlesBySection(sectionId: string): Promise<HcAr
 
 /** Fetch a single article by ID (admin, includes drafts). */
 export async function adminGetArticleById(id: string): Promise<HcArticleWithSection | null> {
+  await requireSession();
   const { data, error } = await supabase
     .from('hc_articles')
     .select('*, hc_sections(slug, title, title_ar, hc_categories(slug, title, title_ar))')
@@ -238,6 +254,7 @@ export async function adminGetArticleById(id: string): Promise<HcArticleWithSect
 
 /** Fetch a single category by ID (admin). */
 export async function adminGetCategoryById(id: string): Promise<HcCategory | null> {
+  await requireSession();
   const { data, error } = await supabase
     .from('hc_categories')
     .select('*')
@@ -250,6 +267,65 @@ export async function adminGetCategoryById(id: string): Promise<HcCategory | nul
 
 // ─── Admin Writes ─────────────────────────────────────────────
 
+async function requireSession() {
+  // Step 1: try reading the existing session from memory/storage
+  const { data, error } = await safeGetSession();
+  if (error) throw error;
+
+  if (data.session) {
+    // Check if the token is about to expire (within 60 seconds)
+    const expiresAt = data.session.expires_at; // Unix timestamp in seconds
+    const nowSec = Math.floor(Date.now() / 1000);
+    if (expiresAt && expiresAt - nowSec < 60) {
+      if (import.meta.env.DEV) {
+        console.log('[helpCenterApi] Token expiring soon, proactively refreshing…');
+      }
+      const { data: refreshData, error: refreshErr } = await supabase.auth.refreshSession();
+      if (!refreshErr && refreshData.session) {
+        return refreshData.session;
+      }
+      // Refresh failed but current token is still technically valid — use it
+      if (expiresAt > nowSec) return data.session;
+    } else {
+      if (import.meta.env.DEV) {
+        console.log('[helpCenterApi] Session OK — user:', data.session.user.id);
+      }
+      return data.session;
+    }
+  }
+
+  // Step 2: session is null — wait briefly for auto-refresh to complete, then retry
+  if (import.meta.env.DEV) {
+    console.log('[helpCenterApi] No session, waiting 1s for auto-refresh…');
+  }
+  await new Promise(r => setTimeout(r, 1000));
+
+  const { data: retryData } = await safeGetSession();
+  if (retryData.session) {
+    if (import.meta.env.DEV) {
+      console.log('[helpCenterApi] Session found on retry — user:', retryData.session.user.id);
+    }
+    return retryData.session;
+  }
+
+  // Step 3: attempt an explicit token refresh before giving up
+  console.warn('[helpCenterApi] No session after retry, attempting refreshSession…');
+  const { data: refreshData, error: refreshErr } = await supabase.auth.refreshSession();
+  if (refreshErr) {
+    console.error('[helpCenterApi] refreshSession failed:', refreshErr.message);
+    throw new Error('No active session. Please sign in again.');
+  }
+  if (!refreshData.session) {
+    console.error('[helpCenterApi] refreshSession returned no session');
+    throw new Error('No active session. Please sign in again.');
+  }
+
+  if (import.meta.env.DEV) {
+    console.log('[helpCenterApi] Session recovered via refresh — user:', refreshData.session.user.id);
+  }
+  return refreshData.session;
+}
+
 type CategoryInput = Omit<HcCategory, 'id' | 'created_at' | 'updated_at'>;
 type SectionInput = Omit<HcSection, 'id' | 'created_at' | 'updated_at'>;
 type ArticleInput = Omit<HcArticle, 'id' | 'created_at' | 'updated_at'>;
@@ -257,6 +333,7 @@ type ArticleInput = Omit<HcArticle, 'id' | 'created_at' | 'updated_at'>;
 // ── Category CRUD ──
 
 export async function adminCreateCategory(input: CategoryInput): Promise<HcCategory> {
+  await requireSession();
   const { data, error } = await supabase
     .from('hc_categories')
     .insert(input)
@@ -268,6 +345,7 @@ export async function adminCreateCategory(input: CategoryInput): Promise<HcCateg
 }
 
 export async function adminUpdateCategory(id: string, updates: Partial<CategoryInput>): Promise<HcCategory> {
+  await requireSession();
   const { data, error } = await supabase
     .from('hc_categories')
     .update(updates)
@@ -280,6 +358,7 @@ export async function adminUpdateCategory(id: string, updates: Partial<CategoryI
 }
 
 export async function adminDeleteCategory(id: string): Promise<void> {
+  await requireSession();
   const { error } = await supabase.from('hc_categories').delete().eq('id', id);
   if (error) throw error;
   emitDataChange('hc_categories');
@@ -288,6 +367,7 @@ export async function adminDeleteCategory(id: string): Promise<void> {
 // ── Section CRUD ──
 
 export async function adminCreateSection(input: SectionInput): Promise<HcSection> {
+  await requireSession();
   const { data, error } = await supabase
     .from('hc_sections')
     .insert(input)
@@ -299,6 +379,7 @@ export async function adminCreateSection(input: SectionInput): Promise<HcSection
 }
 
 export async function adminUpdateSection(id: string, updates: Partial<SectionInput>): Promise<HcSection> {
+  await requireSession();
   const { data, error } = await supabase
     .from('hc_sections')
     .update(updates)
@@ -311,6 +392,7 @@ export async function adminUpdateSection(id: string, updates: Partial<SectionInp
 }
 
 export async function adminDeleteSection(id: string): Promise<void> {
+  await requireSession();
   const { error } = await supabase.from('hc_sections').delete().eq('id', id);
   if (error) throw error;
   emitDataChange('hc_sections');
@@ -319,6 +401,7 @@ export async function adminDeleteSection(id: string): Promise<void> {
 // ── Article CRUD ──
 
 export async function adminCreateArticle(input: ArticleInput): Promise<HcArticle> {
+  await requireSession();
   const { data, error } = await supabase
     .from('hc_articles')
     .insert(input)
@@ -330,6 +413,7 @@ export async function adminCreateArticle(input: ArticleInput): Promise<HcArticle
 }
 
 export async function adminUpdateArticle(id: string, updates: Partial<ArticleInput>): Promise<HcArticle> {
+  await requireSession();
   const { data, error } = await supabase
     .from('hc_articles')
     .update(updates)
@@ -342,6 +426,7 @@ export async function adminUpdateArticle(id: string, updates: Partial<ArticleInp
 }
 
 export async function adminDeleteArticle(id: string): Promise<void> {
+  await requireSession();
   const { error } = await supabase.from('hc_articles').delete().eq('id', id);
   if (error) throw error;
   emitDataChange('hc_articles');
@@ -350,6 +435,7 @@ export async function adminDeleteArticle(id: string): Promise<void> {
 // ── Counts ──
 
 export async function adminGetSectionCount(categoryId: string): Promise<number> {
+  await requireSession();
   const { count, error } = await supabase
     .from('hc_sections')
     .select('*', { count: 'exact', head: true })
@@ -359,6 +445,7 @@ export async function adminGetSectionCount(categoryId: string): Promise<number> 
 }
 
 export async function adminGetArticleCount(sectionId: string): Promise<number> {
+  await requireSession();
   const { count, error } = await supabase
     .from('hc_articles')
     .select('*', { count: 'exact', head: true })
@@ -413,6 +500,7 @@ const DEFAULT_CATEGORIES: Omit<HcCategory, 'id' | 'created_at' | 'updated_at'>[]
 ];
 
 export async function adminSeedDefaultCategories(): Promise<HcCategory[]> {
+  await requireSession();
   const { data, error } = await supabase
     .from('hc_categories')
     .upsert(DEFAULT_CATEGORIES, { onConflict: 'slug', ignoreDuplicates: true })
@@ -473,6 +561,7 @@ const DEFAULT_SECTIONS: SeedSection[] = [
  * Requires categories to be seeded first.
  */
 export async function adminSeedDefaultSections(): Promise<HcSectionWithCategory[]> {
+  await requireSession();
   // Fetch categories to map slugs → UUIDs
   const categories = await adminGetAllCategories();
   const slugToId: Record<string, string> = {};

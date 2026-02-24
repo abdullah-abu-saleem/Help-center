@@ -2,14 +2,12 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
-import { clearCmsSession } from '../../lib/adminCms';
 
 export default function AdminDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-    clearCmsSession();
     try { await supabase.auth.signOut(); } catch {}
     navigate('/admin/login', { replace: true });
   };

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { clearCmsSession } from '../../lib/adminCms';
 import { supabase } from '../../lib/supabase';
 import {
   adminGetAllCategories,
@@ -8,6 +7,7 @@ import {
   adminSeedDefaultCategories,
   adminSeedDefaultSections,
   adminGetSectionCount,
+  isSessionError,
   type HcCategory,
 } from '../../lib/helpCenterApi';
 
@@ -73,6 +73,10 @@ export default function AdminHelpCenterHub() {
       }
     } catch (err: any) {
       console.error('[AdminHelpCenterHub] Failed to load categories:', err);
+      if (isSessionError(err)) {
+        navigate('/admin/login', { replace: true });
+        return;
+      }
       setError(err.message || 'Failed to load categories.');
     } finally {
       setLoading(false);
@@ -91,12 +95,15 @@ export default function AdminHelpCenterHub() {
       setSuccessMsg('Category deleted successfully!');
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err: any) {
+      if (isSessionError(err)) {
+        navigate('/admin/login', { replace: true });
+        return;
+      }
       setError(err.message || 'Failed to delete category.');
     }
   };
 
   const handleLogout = async () => {
-    clearCmsSession();
     try { await supabase.auth.signOut(); } catch {}
     navigate('/admin/login', { replace: true });
   };
@@ -300,7 +307,7 @@ export default function AdminHelpCenterHub() {
 
                 <div className="flex items-center gap-2">
                   <a
-                    href={`/#/help-center/${cat.slug}`}
+                    href={`/#/help/category/${cat.slug}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="px-2 py-1.5 text-xs text-slate-400 hover:text-slate-600 transition-colors"

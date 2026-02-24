@@ -6,6 +6,7 @@ import {
   adminGetSectionsByCategory,
   adminCreateArticle,
   adminUpdateArticle,
+  isSessionError,
   type HcCategory,
   type HcSection,
 } from '../../lib/helpCenterApi';
@@ -163,6 +164,10 @@ export default function AdminArticleEditorFlat() {
         navigate(`/admin/help-center/articles?success=${action}`);
       }
     } catch (err: any) {
+      if (isSessionError(err)) {
+        navigate('/admin/login', { replace: true });
+        return;
+      }
       setError(err.message || 'Failed to save article.');
     } finally {
       setSaving(false);

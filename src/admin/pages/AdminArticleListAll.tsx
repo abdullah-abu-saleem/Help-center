@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { clearCmsSession } from '../../lib/adminCms';
 import { supabase } from '../../lib/supabase';
 import {
   adminGetAllArticles,
   adminGetAllCategories,
   adminGetAllSections,
   adminDeleteArticle,
+  isSessionError,
   type HcCategory,
   type HcSection,
   type HcArticleWithSection,
@@ -79,12 +79,15 @@ export default function AdminArticleListAll() {
       setSuccessMsg('Article deleted successfully!');
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err: any) {
+      if (isSessionError(err)) {
+        navigate('/admin/login', { replace: true });
+        return;
+      }
       setError(err.message || 'Failed to delete article.');
     }
   };
 
   const handleLogout = async () => {
-    clearCmsSession();
     try { await supabase.auth.signOut(); } catch {}
     navigate('/admin/login', { replace: true });
   };

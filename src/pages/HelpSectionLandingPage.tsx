@@ -24,16 +24,6 @@ export default function HelpSectionLandingPage() {
     ? getSectionBySlugAndCategoryId(sectionSlug || '', category.id)
     : undefined;
 
-  if (!category || !section) {
-    return <Navigate to="/404" replace />;
-  }
-
-  // Data loading
-  const groups = getGroupsBySectionId(section.id);
-  const siblingSections = getSectionsByCategoryId(category.id);
-  const hasGroups = groups.length > 0;
-  const ungroupedArticles = !hasGroups ? getArticlesBySectionId(section.id) : [];
-
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
@@ -60,6 +50,16 @@ export default function HelpSectionLandingPage() {
       </div>
     </div>
   );
+
+  if (!category || !section) {
+    return <Navigate to="/404" replace />;
+  }
+
+  // Data loading
+  const groups = getGroupsBySectionId(section.id);
+  const siblingSections = getSectionsByCategoryId(category.id);
+  const hasGroups = groups.length > 0;
+  const ungroupedArticles = !hasGroups ? getArticlesBySectionId(section.id) : [];
 
   return (
     <Layout hero={SearchStrip}>
