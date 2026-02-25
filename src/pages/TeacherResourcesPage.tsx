@@ -119,6 +119,19 @@ export default function TeacherResourcesPage() {
               onPlayVideo={setPlayerVideo}
               heading={t('videoGuidesHeading')}
               subtitle={t('videoGuidesSubtitle')}
+              customThumbnails={{
+                t1: '/thumbnails/adding-student-to-classroom.png',
+                t2: '/thumbnails/using-the-whiteboard.png',
+                t3: '/thumbnails/creating-classroom.png',
+                t4: '/thumbnails/messages-interaction.png',
+                t5: '/thumbnails/adding-post.png',
+                t6: '/thumbnails/adding-student.png',
+                t7: '/thumbnails/using-ai-personal-assistant.png',
+                t8: '/thumbnails/creating-quiz.png',
+                t9: '/thumbnails/creating-assignment.png',
+                t10: '/thumbnails/creating-series.png',
+                t11: '/thumbnails/adding-new-class.png',
+              }}
             />
           )}
         </div>

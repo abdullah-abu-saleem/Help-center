@@ -19,6 +19,8 @@ interface TutorialCarouselProps {
   onPlayVideo: (video: ResourceVideo) => void;
   heading: string;
   subtitle?: string;
+  /** Map of video id → custom poster image URL */
+  customThumbnails?: Record<string, string>;
 }
 
 export const TutorialCarousel: React.FC<TutorialCarouselProps> = ({
@@ -26,6 +28,7 @@ export const TutorialCarousel: React.FC<TutorialCarouselProps> = ({
   onPlayVideo,
   heading,
   subtitle,
+  customThumbnails,
 }) => {
   const trackRef = useRef<HTMLDivElement>(null);
   const [canLeft, setCanLeft] = useState(false);
@@ -133,6 +136,7 @@ export const TutorialCarousel: React.FC<TutorialCarouselProps> = ({
                 video={v}
                 displayIndex={i + 1}
                 onPlay={() => onPlayVideo(v)}
+                {...(customThumbnails?.[v.id] ? { customThumbnail: customThumbnails[v.id], inlinePlay: true } : {})}
               />
             </div>
           ))}
