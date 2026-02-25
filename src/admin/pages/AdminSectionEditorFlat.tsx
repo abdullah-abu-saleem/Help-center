@@ -25,7 +25,7 @@ export default function AdminSectionEditorFlat() {
     description_ar: '',
     icon: '',
     sort_order: 0,
-    is_active: true,
+    is_published: true,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -52,7 +52,7 @@ export default function AdminSectionEditorFlat() {
             description_ar: section.description_ar || '',
             icon: section.icon || '',
             sort_order: section.sort_order,
-            is_active: section.is_active,
+            is_published: section.is_published,
           });
           const cat = cats.find((c) => c.id === section.category_id) || null;
           setCategory(cat);
@@ -93,7 +93,7 @@ export default function AdminSectionEditorFlat() {
         description_ar: form.description_ar.trim() || null,
         icon: form.icon.trim(),
         sort_order: form.sort_order,
-        is_active: form.is_active,
+        is_published: form.is_published,
       };
 
       if (isNew) {
@@ -156,7 +156,7 @@ export default function AdminSectionEditorFlat() {
             )}
           </div>
           <div className="flex items-center gap-3">
-            {!isNew && form.is_active && category && (
+            {!isNew && form.is_published && category && (
               <a
                 href={`/#/help-center/${category.slug}/${form.slug}`}
                 target="_blank"
@@ -196,7 +196,7 @@ export default function AdminSectionEditorFlat() {
                 >
                   <option value="">Select a category...</option>
                   {categories.map((c) => (
-                    <option key={c.id} value={c.id}>{c.title}{!c.is_active ? ' (Inactive)' : ''}</option>
+                    <option key={c.id} value={c.id}>{c.title}{!c.is_published ? ' (Inactive)' : ''}</option>
                   ))}
                 </select>
               </div>
@@ -301,8 +301,8 @@ export default function AdminSectionEditorFlat() {
                   <input
                     type="checkbox"
                     className="w-5 h-5 rounded border-slate-300 text-indigo-500 focus:ring-indigo-400 focus:ring-offset-0 transition-all"
-                    checked={form.is_active}
-                    onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
+                    checked={form.is_published}
+                    onChange={(e) => setForm({ ...form, is_published: e.target.checked })}
                   />
                   <span className="text-sm font-medium text-slate-700">Is Active</span>
                 </label>

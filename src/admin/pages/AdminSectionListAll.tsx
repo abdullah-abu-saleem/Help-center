@@ -85,8 +85,8 @@ export default function AdminSectionListAll() {
   // ── Filtered sections ──
   const filtered = useMemo(() => {
     let list = sections;
-    if (statusFilter === 'active') list = list.filter((s) => s.is_active);
-    if (statusFilter === 'inactive') list = list.filter((s) => !s.is_active);
+    if (statusFilter === 'active') list = list.filter((s) => s.is_published);
+    if (statusFilter === 'inactive') list = list.filter((s) => !s.is_published);
     if (categoryFilter !== 'all') list = list.filter((s) => s.category_id === categoryFilter);
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -285,7 +285,7 @@ export default function AdminSectionListAll() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <h3 className="text-sm font-semibold text-slate-900 truncate">{section.title}</h3>
-                      {!section.is_active && (
+                      {!section.is_published && (
                         <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-100">
                           Inactive
                         </span>
@@ -304,7 +304,7 @@ export default function AdminSectionListAll() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {section.is_active && section.hc_categories?.slug && (
+                  {section.is_published && section.hc_categories?.slug && (
                     <a
                       href={`/#/help-center/${section.hc_categories.slug}/${section.slug}`}
                       target="_blank"

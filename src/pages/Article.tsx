@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, Navigate, Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -13,6 +13,14 @@ import {
   getArticlesByGroupId,
   getArticlesBySectionId
 } from '../lib/api';
+import {
+  getHcArticleBySlugFull,
+  getHcGroupsBySection,
+  getHcArticlesByGroup,
+  getHcArticlesBySection,
+  type HcArticle,
+  type HcGroup,
+} from '../lib/helpCenterApi';
 import { formatDate, uniqueSlugIds, scrollToHash } from '../lib/utils';
 import { Section, Category, Group, Article } from '../types';
 
@@ -29,7 +37,33 @@ const MARKDOWN_COMPONENTS = {
 export default function ArticlePage() {
   const { t, localize } = useI18n();
   const { articleSlug } = useParams();
-  const article = getArticleBySlug(articleSlug || '');
+
+  // Supabase-first data
+  const [dbArticle, setDbArticle] = useState<any>(null);
+  const [dbSection, setDbSection] = useState<any>(null);
+  const [dbCategory, setDbCategory] = useState<any>(null);
+  const [dbGroups, setDbGroups] = useState<any[]>([]);
+  const [dbGroupArticles, setDbGroupArticles] = useState<Map<string, any[]>>(new Map());
+  const [dbSectionArticles, setDbSectionArticles] = useState<any[]>([]);
+  const [dbLoaded, setDbLoaded] = useState(false);
+
+  // Static fallback
+  const staticArticle = getArticleBySlug(articleSlug || '');
+
+  // Use DB article if available, else static
+  const article = dbLoaded && dbArticle
+    ? {
+        ...dbArticle,
+        sectionId: dbArticle.section_id,
+        groupId: dbArticle.group_id,
+        bodyMarkdown: dbArticle.body_markdown,
+        bodyMarkdown_ar: dbArticle.body_markdown_ar,
+        summary_ar: dbArticle.summary_ar,
+        updatedAt: dbArticle.updated_at,
+        isTop: dbArticle.is_top,
+        isFeatured: dbArticle.is_featured,
+      }
+    : staticArticle;
 
   // Data State
   const [section, setSection] = useState<Section | undefined>(undefined);
@@ -48,19 +82,73 @@ export default function ArticlePage() {
   // Scroll to top when article changes
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
-  }, [article?.id]);
+  }, [articleSlug]);
 
-  // Load Context Data
+  // Load from Supabase
   useEffect(() => {
-    if (article) {
-      const s = getSectionById(article.sectionId);
+    let cancelled = false;
+    setDbLoaded(false);
+    (async () => {
+      try {
+        const art = await getHcArticleBySlugFull(articleSlug || '');
+        if (cancelled || !art) { if (!cancelled) setDbLoaded(true); return; }
+        setDbArticle(art);
+
+        const sec = (art as any).hc_sections;
+        if (sec) {
+          setDbSection(sec);
+          const cat = sec.hc_categories;
+          if (cat) setDbCategory(cat);
+
+          // Load groups + articles for sidebar
+          const [grps, secArts] = await Promise.all([
+            getHcGroupsBySection(sec.id),
+            getHcArticlesBySection(sec.id),
+          ]);
+          if (cancelled) return;
+          setDbGroups(grps);
+          setDbSectionArticles(secArts);
+
+          // Load articles per group
+          const groupArtsMap = new Map<string, any[]>();
+          for (const g of grps) {
+            const gArts = await getHcArticlesByGroup(g.id);
+            if (cancelled) return;
+            groupArtsMap.set(g.id, gArts);
+          }
+          setDbGroupArticles(groupArtsMap);
+        }
+      } catch {
+        // Supabase unavailable — fall back
+      } finally {
+        if (!cancelled) setDbLoaded(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [articleSlug]);
+
+  // Load static context data (fallback)
+  useEffect(() => {
+    if (staticArticle && !dbArticle) {
+      const s = getSectionById(staticArticle.sectionId);
       setSection(s);
       if (s) {
         setSectionGroups(getGroupsBySectionId(s.id));
         setCategory(getCategoryById(s.categoryId));
       }
     }
-  }, [article]);
+  }, [staticArticle, dbArticle]);
+
+  // Map DB data to context when available
+  useEffect(() => {
+    if (dbLoaded && dbSection) {
+      setSection({ id: dbSection.id, categoryId: dbSection.category_id, slug: dbSection.slug, title: dbSection.title, title_ar: dbSection.title_ar, description: '', order: 0 } as any);
+      if (dbCategory) {
+        setCategory({ id: dbCategory.id, slug: dbCategory.slug, title: dbCategory.title, title_ar: dbCategory.title_ar, description: '', order: 0, icon: '' } as any);
+      }
+      setSectionGroups(dbGroups.map((g: any) => ({ id: g.id, sectionId: g.section_id, title: g.title, title_ar: g.title_ar, description: g.description, description_ar: g.description_ar, order: g.sort_order })));
+    }
+  }, [dbLoaded, dbSection, dbCategory, dbGroups]);
 
   // Generate TOC & Set up Observer
   useEffect(() => {
@@ -99,8 +187,17 @@ export default function ArticlePage() {
     return () => observer.current?.disconnect();
   }, [article?.id]); // Re-run when article changes
 
+  if (!dbLoaded && !staticArticle) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center py-20">
+          <div className="w-8 h-8 border-2 border-slate-200 border-t-[#6366f1] rounded-full animate-spin" />
+        </div>
+      </Layout>
+    );
+  }
   if (!article || !section || !category) {
-    if (!article) return <Navigate to="/404" replace />;
+    if (dbLoaded && !article) return <Navigate to="/404" replace />;
     return null; // Loading
   }
 
@@ -150,7 +247,9 @@ export default function ArticlePage() {
                 <div className="space-y-1">
                   {sectionGroups.map(group => {
                     // Check if this group contains the current article
-                    const groupArticles = getArticlesByGroupId(group.id);
+                    const groupArticles = dbGroupArticles.size > 0
+                      ? (dbGroupArticles.get(group.id) || []).map((a: any) => ({ ...a, sectionId: a.section_id, groupId: a.group_id, bodyMarkdown: a.body_markdown || '', updatedAt: a.updated_at || '', tags: a.tags || [] }))
+                      : getArticlesByGroupId(group.id);
                     const isCurrentGroup = group.id === article.groupId;
 
                     if (isCurrentGroup) {
@@ -200,7 +299,10 @@ export default function ArticlePage() {
                   })}
 
                   {/* Fallback for ungrouped articles if any */}
-                  {sectionGroups.length === 0 && getArticlesBySectionId(section.id).map(a => (
+                  {sectionGroups.length === 0 && (dbSectionArticles.length > 0
+                    ? dbSectionArticles.map((a: any) => ({ ...a, sectionId: a.section_id, groupId: a.group_id, bodyMarkdown: a.body_markdown || '', updatedAt: a.updated_at || '', tags: a.tags || [] }))
+                    : getArticlesBySectionId(section.id)
+                  ).map(a => (
                      <Link
                         key={a.id}
                         to={`/help/article/${a.slug}`}

@@ -256,7 +256,7 @@ export default function AdminArticleEditorFlat() {
                 >
                   <option value="">Select a category...</option>
                   {categories.map((c) => (
-                    <option key={c.id} value={c.id}>{c.title}{!c.is_active ? ' (Inactive)' : ''}</option>
+                    <option key={c.id} value={c.id}>{c.title}{!c.is_published ? ' (Inactive)' : ''}</option>
                   ))}
                 </select>
               </div>
@@ -270,7 +270,7 @@ export default function AdminArticleEditorFlat() {
                 >
                   <option value="">{selectedCategoryId ? 'Select a section...' : 'Select a category first'}</option>
                   {sections.map((s) => (
-                    <option key={s.id} value={s.id}>{s.title}{!s.is_active ? ' (Inactive)' : ''}</option>
+                    <option key={s.id} value={s.id}>{s.title}{!s.is_published ? ' (Inactive)' : ''}</option>
                   ))}
                 </select>
               </div>

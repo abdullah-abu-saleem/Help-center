@@ -1,7 +1,15 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, Navigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { getCategoryBySlug, getSectionsByCategoryId, getFeaturedArticlesByCategory } from '../lib/api';
+import {
+  getHcCategoryBySlug,
+  getHcSectionsByCategory,
+  getHcFeaturedArticlesByCategory,
+  type HcCategory,
+  type HcSection,
+  type HcArticle,
+} from '../lib/helpCenterApi';
 import { FEATURE_CATEGORIES, ROLE_SLUG_MAP } from '../data';
 import { FeatureCard } from '../components/FeatureCard';
 import { useI18n } from '../lib/i18n';
@@ -152,14 +160,65 @@ const defaultIcon = (
 export default function CategoryPage() {
   const { t, dir, localize } = useI18n();
   const { categorySlug } = useParams();
-  const category = getCategoryBySlug(categorySlug || '');
 
-  if (!category) {
+  // Supabase-first with static fallback
+  const [dbCategory, setDbCategory] = useState<HcCategory | null>(null);
+  const [dbSections, setDbSections] = useState<HcSection[]>([]);
+  const [dbFeatured, setDbFeatured] = useState<HcArticle[]>([]);
+  const [dbLoaded, setDbLoaded] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const cat = await getHcCategoryBySlug(categorySlug || '');
+        if (cancelled) return;
+        if (cat) {
+          setDbCategory(cat);
+          const [secs, feats] = await Promise.all([
+            getHcSectionsByCategory(cat.id),
+            getHcFeaturedArticlesByCategory(cat.id),
+          ]);
+          if (!cancelled) {
+            setDbSections(secs);
+            setDbFeatured(feats);
+          }
+        }
+      } catch {
+        // Supabase unavailable — will fall back to static data
+      } finally {
+        if (!cancelled) setDbLoaded(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [categorySlug]);
+
+  // Use Supabase data if available, otherwise fall back to static
+  const staticCategory = getCategoryBySlug(categorySlug || '');
+  const category = dbLoaded && dbCategory
+    ? { ...dbCategory, id: dbCategory.id, slug: dbCategory.slug, order: dbCategory.sort_order, icon: dbCategory.icon }
+    : staticCategory;
+
+  if (dbLoaded && !category) {
     return <Navigate to="/404" replace />;
   }
+  if (!category) {
+    // Still loading from Supabase
+    return (
+      <Layout>
+        <div className="flex items-center justify-center py-20">
+          <div className="w-8 h-8 border-2 border-slate-200 border-t-[#6366f1] rounded-full animate-spin" />
+        </div>
+      </Layout>
+    );
+  }
 
-  const sections = getSectionsByCategoryId(category.id);
-  const featuredArticles = getFeaturedArticlesByCategory(category.id);
+  const sections = dbLoaded && dbCategory
+    ? dbSections.map(s => ({ ...s, id: s.id, categoryId: s.category_id, slug: s.slug, order: s.sort_order }))
+    : getSectionsByCategoryId(category.id);
+  const featuredArticles = dbLoaded && dbCategory
+    ? dbFeatured.map(a => ({ ...a, sectionId: a.section_id, bodyMarkdown: a.body_markdown, bodyMarkdown_ar: a.body_markdown_ar, updatedAt: a.updated_at, isFeatured: true, isTop: false }))
+    : getFeaturedArticlesByCategory(category.id);
   const isRtl = dir === 'rtl';
 
   const roleSlug = ROLE_SLUG_MAP[category.slug];

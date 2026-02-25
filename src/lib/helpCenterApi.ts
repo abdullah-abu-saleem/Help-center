@@ -30,7 +30,7 @@ export interface HcCategory {
   description_ar: string | null;
   icon: string;
   sort_order: number;
-  is_active: boolean;
+  is_published: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -45,7 +45,7 @@ export interface HcSection {
   description_ar: string | null;
   icon: string;
   sort_order: number;
-  is_active: boolean;
+  is_published: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -63,6 +63,18 @@ export interface HcArticle {
   sort_order: number;
   is_published: boolean;
   tags: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface HcGroup {
+  id: string;
+  section_id: string;
+  title: string;
+  title_ar: string | null;
+  description: string;
+  description_ar: string | null;
+  sort_order: number;
   created_at: string;
   updated_at: string;
 }
@@ -86,7 +98,7 @@ export async function getHcCategories(): Promise<HcCategory[]> {
   const { data, error } = await supabase
     .from('hc_categories')
     .select('*')
-    .eq('is_active', true)
+    .eq('is_published', true)
     .order('sort_order', { ascending: true });
 
   if (error) throw error;
@@ -99,7 +111,7 @@ export async function getHcCategoryBySlug(slug: string): Promise<HcCategory | nu
     .from('hc_categories')
     .select('*')
     .eq('slug', slug)
-    .eq('is_active', true)
+    .eq('is_published', true)
     .single();
 
   if (error && error.code !== 'PGRST116') throw error;
@@ -112,7 +124,7 @@ export async function getHcSectionsByCategory(categoryId: string): Promise<HcSec
     .from('hc_sections')
     .select('*')
     .eq('category_id', categoryId)
-    .eq('is_active', true)
+    .eq('is_published', true)
     .order('sort_order', { ascending: true });
 
   if (error) throw error;
@@ -129,7 +141,7 @@ export async function getHcSectionBySlug(
     .select('*, hc_categories(slug, title, title_ar)')
     .eq('category_id', categoryId)
     .eq('slug', sectionSlug)
-    .eq('is_active', true)
+    .eq('is_published', true)
     .single();
 
   if (error && error.code !== 'PGRST116') throw error;
@@ -160,6 +172,146 @@ export async function getHcArticleBySlug(slug: string): Promise<HcArticleWithSec
 
   if (error && error.code !== 'PGRST116') throw error;
   return (data as HcArticleWithSection) || null;
+}
+
+/** Fetch groups for a given section (public). */
+export async function getHcGroupsBySection(sectionId: string): Promise<HcGroup[]> {
+  const { data, error } = await supabase
+    .from('hc_groups')
+    .select('*')
+    .eq('section_id', sectionId)
+    .order('sort_order', { ascending: true });
+
+  if (error) throw error;
+  return data || [];
+}
+
+/** Fetch published articles for a given group (public). */
+export async function getHcArticlesByGroup(groupId: string): Promise<HcArticle[]> {
+  const { data, error } = await supabase
+    .from('hc_articles')
+    .select('*')
+    .eq('group_id', groupId)
+    .eq('is_published', true)
+    .order('sort_order', { ascending: true });
+
+  if (error) throw error;
+  return data || [];
+}
+
+/** Fetch a single article by slug (public, must be published). Returns full lineage. */
+export async function getHcArticleBySlugFull(slug: string): Promise<(HcArticle & {
+  hc_sections: (Pick<HcSection, 'id' | 'slug' | 'title' | 'title_ar' | 'category_id'> & {
+    hc_categories: Pick<HcCategory, 'id' | 'slug' | 'title' | 'title_ar'> | null;
+  }) | null;
+}) | null> {
+  const { data, error } = await supabase
+    .from('hc_articles')
+    .select('*, hc_sections(id, slug, title, title_ar, category_id, hc_categories(id, slug, title, title_ar))')
+    .eq('slug', slug)
+    .eq('is_published', true)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw error;
+  return data || null;
+}
+
+/** Fetch featured articles for a category (public). */
+export async function getHcFeaturedArticlesByCategory(categoryId: string): Promise<HcArticle[]> {
+  // Get all section IDs for this category first
+  const { data: sections, error: secErr } = await supabase
+    .from('hc_sections')
+    .select('id')
+    .eq('category_id', categoryId)
+    .eq('is_published', true);
+
+  if (secErr) throw secErr;
+  if (!sections || sections.length === 0) return [];
+
+  const sectionIds = sections.map(s => s.id);
+  const { data, error } = await supabase
+    .from('hc_articles')
+    .select('*')
+    .in('section_id', sectionIds)
+    .eq('is_published', true)
+    .eq('is_featured', true)
+    .order('sort_order', { ascending: true });
+
+  if (error) throw error;
+  return data || [];
+}
+
+/** Count published articles for a category (public). */
+export async function getHcArticleCountByCategory(categoryId: string): Promise<number> {
+  const { data: sections, error: secErr } = await supabase
+    .from('hc_sections')
+    .select('id')
+    .eq('category_id', categoryId)
+    .eq('is_published', true);
+
+  if (secErr) throw secErr;
+  if (!sections || sections.length === 0) return 0;
+
+  const sectionIds = sections.map(s => s.id);
+  const { count, error } = await supabase
+    .from('hc_articles')
+    .select('*', { count: 'exact', head: true })
+    .in('section_id', sectionIds)
+    .eq('is_published', true);
+
+  if (error) throw error;
+  return count || 0;
+}
+
+/** Count published articles for a section (public). */
+export async function getHcArticleCountBySection(sectionId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from('hc_articles')
+    .select('*', { count: 'exact', head: true })
+    .eq('section_id', sectionId)
+    .eq('is_published', true);
+
+  if (error) throw error;
+  return count || 0;
+}
+
+/** Search published articles by query (public). */
+export async function searchHcArticles(query: string): Promise<HcArticle[]> {
+  if (!query.trim()) return [];
+
+  // Use ilike for simple text search across title, summary, body, tags
+  const q = `%${query.trim()}%`;
+  const { data, error } = await supabase
+    .from('hc_articles')
+    .select('*')
+    .eq('is_published', true)
+    .or(`title.ilike.${q},summary.ilike.${q},body_markdown.ilike.${q}`)
+    .order('sort_order', { ascending: true })
+    .limit(50);
+
+  if (error) throw error;
+  return data || [];
+}
+
+/** Fetch a section by slug within a category, resolving by category slug first (public). */
+export async function getHcSectionBySlugs(
+  categorySlug: string,
+  sectionSlug: string,
+): Promise<(HcSection & { hc_categories: Pick<HcCategory, 'id' | 'slug' | 'title' | 'title_ar'> | null }) | null> {
+  // First get the category
+  const cat = await getHcCategoryBySlug(categorySlug);
+  if (!cat) return null;
+
+  const { data, error } = await supabase
+    .from('hc_sections')
+    .select('*, hc_categories(id, slug, title, title_ar)')
+    .eq('category_id', cat.id)
+    .eq('slug', sectionSlug)
+    .eq('is_published', true)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw error;
+  return data || null;
 }
 
 // ─── Admin Reads (includes inactive/unpublished) ──────────────
@@ -465,7 +617,7 @@ const DEFAULT_CATEGORIES: Omit<HcCategory, 'id' | 'created_at' | 'updated_at'>[]
     description_ar: 'أنا والد، ولي أمر، جد، إلخ.',
     icon: 'home',
     sort_order: 1,
-    is_active: true,
+    is_published: true,
   },
   {
     slug: 'for-students',
@@ -475,7 +627,7 @@ const DEFAULT_CATEGORIES: Omit<HcCategory, 'id' | 'created_at' | 'updated_at'>[]
     description_ar: 'نصائح وموارد للطلاب.',
     icon: 'academic-cap',
     sort_order: 2,
-    is_active: true,
+    is_published: true,
   },
   {
     slug: 'for-teachers',
@@ -485,7 +637,7 @@ const DEFAULT_CATEGORIES: Omit<HcCategory, 'id' | 'created_at' | 'updated_at'>[]
     description_ar: 'مقالات مفيدة للمعلمين والمربين.',
     icon: 'user',
     sort_order: 3,
-    is_active: true,
+    is_published: true,
   },
   {
     slug: 'for-schools-and-districts',
@@ -495,7 +647,7 @@ const DEFAULT_CATEGORIES: Omit<HcCategory, 'id' | 'created_at' | 'updated_at'>[]
     description_ar: 'موارد لقادة المدارس والإداريين.',
     icon: 'building',
     sort_order: 4,
-    is_active: true,
+    is_published: true,
   },
 ];
 
@@ -585,7 +737,7 @@ export async function adminSeedDefaultSections(): Promise<HcSectionWithCategory[
       description_ar: s.description_ar,
       icon: s.icon,
       sort_order: s.sort_order,
-      is_active: true,
+      is_published: true,
     });
   }
 

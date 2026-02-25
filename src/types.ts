@@ -115,7 +115,10 @@ export interface BlogLike {
 export interface Tutorial {
   id: string;
   title: string;
+  title_ar?: string | null;
   description: string | null;
+  description_ar?: string | null;
+  audience?: string | null;
   youtube_url: string;
   thumbnail_url: string | null;
   sort_order: number;

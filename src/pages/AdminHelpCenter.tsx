@@ -141,7 +141,7 @@ export default function AdminHelpCenter() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <h3 className="text-sm font-semibold text-slate-900 truncate">{cat.title}</h3>
-                      {!cat.is_active && (
+                      {!cat.is_published && (
                         <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-100">
                           Inactive
                         </span>

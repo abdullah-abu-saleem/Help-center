@@ -2,6 +2,7 @@ import React from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { searchArticles } from '../lib/api';
+import { searchHcArticles, type HcArticle } from '../lib/helpCenterApi';
 import { SearchResult } from '../types';
 import { useI18n } from '../lib/i18n';
 
@@ -11,13 +12,62 @@ export default function SearchPage() {
   const query = searchParams.get('q') || '';
   const [results, setResults] = React.useState<SearchResult[]>([]);
   const [sort, setSort] = React.useState<'relevance' | 'updated'>('relevance');
+  const [loading, setLoading] = React.useState(false);
 
   React.useEffect(() => {
-    const rawResults = searchArticles(query);
-    if (sort === 'updated') {
-        rawResults.sort((a, b) => new Date(b.article.updatedAt).getTime() - new Date(a.article.updatedAt).getTime());
-    }
-    setResults(rawResults);
+    let cancelled = false;
+    setLoading(true);
+
+    // Try Supabase first, fall back to static
+    searchHcArticles(query)
+      .then((dbResults) => {
+        if (cancelled) return;
+        if (dbResults.length > 0) {
+          // Map DB results to SearchResult format
+          const mapped: SearchResult[] = dbResults.map((a: HcArticle) => ({
+            article: {
+              id: a.id,
+              sectionId: a.section_id,
+              slug: a.slug,
+              title: a.title,
+              title_ar: a.title_ar,
+              summary: a.summary,
+              summary_ar: a.summary_ar,
+              bodyMarkdown: a.body_markdown,
+              bodyMarkdown_ar: a.body_markdown_ar,
+              updatedAt: a.updated_at,
+              tags: a.tags || [],
+              isTop: (a as any).is_top || false,
+              isFeatured: (a as any).is_featured || false,
+            } as any,
+            score: 1,
+            matches: ['Database match'],
+          }));
+          if (sort === 'updated') {
+            mapped.sort((a, b) => new Date(b.article.updatedAt).getTime() - new Date(a.article.updatedAt).getTime());
+          }
+          setResults(mapped);
+        } else {
+          // Fallback to static search
+          const rawResults = searchArticles(query);
+          if (sort === 'updated') {
+            rawResults.sort((a, b) => new Date(b.article.updatedAt).getTime() - new Date(a.article.updatedAt).getTime());
+          }
+          if (!cancelled) setResults(rawResults);
+        }
+      })
+      .catch(() => {
+        // Supabase unavailable — use static
+        if (cancelled) return;
+        const rawResults = searchArticles(query);
+        if (sort === 'updated') {
+          rawResults.sort((a, b) => new Date(b.article.updatedAt).getTime() - new Date(a.article.updatedAt).getTime());
+        }
+        setResults(rawResults);
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
+
+    return () => { cancelled = true; };
   }, [query, sort]);
 
   return (

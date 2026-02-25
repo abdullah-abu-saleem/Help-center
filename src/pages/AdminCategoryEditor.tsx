@@ -20,7 +20,7 @@ export default function AdminCategoryEditor() {
     description_ar: '',
     icon: 'folder',
     sort_order: 0,
-    is_active: true,
+    is_published: true,
   });
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
@@ -39,7 +39,7 @@ export default function AdminCategoryEditor() {
               description_ar: cat.description_ar || '',
               icon: cat.icon,
               sort_order: cat.sort_order,
-              is_active: cat.is_active,
+              is_published: cat.is_published,
             });
           } else {
             setError('Category not found.');
@@ -73,7 +73,7 @@ export default function AdminCategoryEditor() {
         description_ar: form.description_ar.trim() || null,
         icon: form.icon.trim() || 'folder',
         sort_order: form.sort_order,
-        is_active: form.is_active,
+        is_published: form.is_published,
       };
 
       if (isNew) {
@@ -228,8 +228,8 @@ export default function AdminCategoryEditor() {
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={form.is_active}
-                  onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
+                  checked={form.is_published}
+                  onChange={(e) => setForm({ ...form, is_published: e.target.checked })}
                   className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                 />
                 <span className="text-sm font-medium text-slate-700">Active</span>

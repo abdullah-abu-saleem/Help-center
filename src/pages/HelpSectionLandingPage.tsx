@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, Navigate, useNavigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { ArticleGroup } from '../components/ArticleGroup';
@@ -11,6 +11,18 @@ import {
   getArticlesBySectionId,
   getSectionsByCategoryId
 } from '../lib/api';
+import {
+  getHcCategoryBySlug,
+  getHcSectionsByCategory,
+  getHcSectionBySlugs,
+  getHcGroupsBySection,
+  getHcArticlesByGroup,
+  getHcArticlesBySection,
+  type HcCategory,
+  type HcSection,
+  type HcGroup,
+  type HcArticle,
+} from '../lib/helpCenterApi';
 import { scrollToHash } from '../lib/utils';
 
 export default function HelpSectionLandingPage() {
@@ -19,10 +31,70 @@ export default function HelpSectionLandingPage() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
 
-  const category = getCategoryBySlug(categorySlug || '');
-  const section = category
-    ? getSectionBySlugAndCategoryId(sectionSlug || '', category.id)
+  // Supabase-first state
+  const [dbCategory, setDbCategory] = useState<HcCategory | null>(null);
+  const [dbSection, setDbSection] = useState<(HcSection & { hc_categories?: any }) | null>(null);
+  const [dbSiblingSections, setDbSiblingSections] = useState<HcSection[]>([]);
+  const [dbGroups, setDbGroups] = useState<HcGroup[]>([]);
+  const [dbGroupArticles, setDbGroupArticles] = useState<Map<string, HcArticle[]>>(new Map());
+  const [dbUngroupedArticles, setDbUngroupedArticles] = useState<HcArticle[]>([]);
+  const [dbLoaded, setDbLoaded] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setDbLoaded(false);
+    (async () => {
+      try {
+        const sec = await getHcSectionBySlugs(categorySlug || '', sectionSlug || '');
+        if (cancelled) return;
+        if (!sec) { setDbLoaded(true); return; }
+        setDbSection(sec);
+
+        const catData = (sec as any).hc_categories;
+        if (catData) setDbCategory(catData);
+
+        const catId = catData?.id || sec.category_id;
+        const [siblings, grps, secArts] = await Promise.all([
+          getHcSectionsByCategory(catId),
+          getHcGroupsBySection(sec.id),
+          getHcArticlesBySection(sec.id),
+        ]);
+        if (cancelled) return;
+
+        setDbSiblingSections(siblings);
+        setDbGroups(grps);
+        setDbUngroupedArticles(secArts);
+
+        // Load articles per group
+        const gMap = new Map<string, HcArticle[]>();
+        for (const g of grps) {
+          const arts = await getHcArticlesByGroup(g.id);
+          if (cancelled) return;
+          gMap.set(g.id, arts);
+        }
+        setDbGroupArticles(gMap);
+      } catch {
+        // fallback to static
+      } finally {
+        if (!cancelled) setDbLoaded(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [categorySlug, sectionSlug]);
+
+  // Static fallback
+  const staticCategory = getCategoryBySlug(categorySlug || '');
+  const staticSection = staticCategory
+    ? getSectionBySlugAndCategoryId(sectionSlug || '', staticCategory.id)
     : undefined;
+
+  // Resolved values
+  const category = (dbLoaded && dbCategory)
+    ? { ...dbCategory, order: dbCategory.sort_order } as any
+    : staticCategory;
+  const section = (dbLoaded && dbSection)
+    ? { ...dbSection, categoryId: dbSection.category_id, order: dbSection.sort_order } as any
+    : staticSection;
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,15 +123,33 @@ export default function HelpSectionLandingPage() {
     </div>
   );
 
+  if (!dbLoaded && !staticCategory) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center py-20">
+          <div className="w-8 h-8 border-2 border-slate-200 border-t-[#6366f1] rounded-full animate-spin" />
+        </div>
+      </Layout>
+    );
+  }
+
   if (!category || !section) {
     return <Navigate to="/404" replace />;
   }
 
-  // Data loading
-  const groups = getGroupsBySectionId(section.id);
-  const siblingSections = getSectionsByCategoryId(category.id);
+  // Data loading — prefer Supabase, fall back to static
+  const groups = (dbLoaded && dbGroups.length > 0)
+    ? dbGroups.map(g => ({ id: g.id, sectionId: g.section_id, title: g.title, title_ar: g.title_ar, description: g.description, description_ar: g.description_ar, order: g.sort_order }))
+    : getGroupsBySectionId(section.id);
+  const siblingSections = (dbLoaded && dbSiblingSections.length > 0)
+    ? dbSiblingSections.map(s => ({ ...s, categoryId: s.category_id, order: s.sort_order })) as any[]
+    : getSectionsByCategoryId(category.id);
   const hasGroups = groups.length > 0;
-  const ungroupedArticles = !hasGroups ? getArticlesBySectionId(section.id) : [];
+  const ungroupedArticles = !hasGroups
+    ? ((dbLoaded && dbUngroupedArticles.length > 0)
+        ? dbUngroupedArticles.map(a => ({ ...a, sectionId: a.section_id, groupId: (a as any).group_id, bodyMarkdown: a.body_markdown, bodyMarkdown_ar: a.body_markdown_ar, updatedAt: a.updated_at, tags: a.tags || [] })) as any[]
+        : getArticlesBySectionId(section.id))
+    : [];
 
   return (
     <Layout hero={SearchStrip}>
@@ -167,7 +257,10 @@ export default function HelpSectionLandingPage() {
               {hasGroups ? (
                 <div className="space-y-10">
                   {groups.map((group) => {
-                    const groupArticles = getArticlesByGroupId(group.id);
+                    const rawGroupArticles = (dbGroupArticles.size > 0)
+                      ? (dbGroupArticles.get(group.id) || []).map((a: any) => ({ ...a, sectionId: a.section_id, groupId: a.group_id, bodyMarkdown: a.body_markdown || '', updatedAt: a.updated_at || '', tags: a.tags || [] }))
+                      : getArticlesByGroupId(group.id);
+                    const groupArticles = rawGroupArticles;
                     return (
                       <ArticleGroup
                         key={group.id}

@@ -14,7 +14,9 @@ export type DataTable =
   | 'hc_categories'
   | 'hc_sections'
   | 'hc_articles'
+  | 'hc_groups'
   | 'tutorials'
+  | 'tutorial_items'
   | 'blog_posts';
 
 const EVENT_NAME = 'hc-data-change';

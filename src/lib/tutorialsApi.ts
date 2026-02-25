@@ -123,6 +123,7 @@ export interface TutorialInput {
   title_ar?: string | null;
   description?: string | null;
   description_ar?: string | null;
+  audience?: string | null;
   youtube_url: string;
   thumbnail_url?: string | null;
   sort_order?: number;
@@ -139,6 +140,7 @@ export async function adminCreateTutorial(input: TutorialInput): Promise<Tutoria
     title_ar: input.title_ar?.trim() || null,
     description: input.description || null,
     description_ar: input.description_ar?.trim() || null,
+    audience: input.audience?.trim() || null,
     youtube_url: input.youtube_url,
     thumbnail_url: thumbnail,
     sort_order: input.sort_order ?? 0,
@@ -173,6 +175,7 @@ export async function adminUpdateTutorial(id: string, input: TutorialInput): Pro
     title_ar: input.title_ar?.trim() || null,
     description: input.description || null,
     description_ar: input.description_ar?.trim() || null,
+    audience: input.audience?.trim() || null,
     youtube_url: input.youtube_url,
     thumbnail_url: thumbnail,
     sort_order: input.sort_order ?? 0,
@@ -204,4 +207,155 @@ export async function adminDeleteTutorial(id: string): Promise<void> {
   const { error } = await supabase.from('tutorials').delete().eq('id', id);
   if (error) throw error;
   emitDataChange('tutorials');
+}
+
+/* ═══════════════════════════════════════════════════
+   Audience-filtered queries
+   ═══════════════════════════════════════════════════ */
+
+export async function getPublishedTutorialsByAudience(audience: string): Promise<Tutorial[]> {
+  const { data, error } = await supabase
+    .from('tutorials')
+    .select('*')
+    .eq('is_published', true)
+    .eq('audience', audience)
+    .order('sort_order', { ascending: true });
+
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function adminGetTutorialsByAudience(audience: string): Promise<Tutorial[]> {
+  await requireSession();
+  const { data, error } = await supabase
+    .from('tutorials')
+    .select('*')
+    .eq('audience', audience)
+    .order('sort_order', { ascending: true });
+
+  if (error) throw error;
+  return data ?? [];
+}
+
+/* ═══════════════════════════════════════════════════
+   Tutorial Items CRUD
+   ═══════════════════════════════════════════════════ */
+
+export interface TutorialItem {
+  id: string;
+  tutorial_id: string;
+  title: string;
+  title_ar: string | null;
+  description: string | null;
+  description_ar: string | null;
+  youtube_url: string | null;
+  link: string | null;
+  thumbnail_url: string | null;
+  resource_type: string;
+  sort_order: number;
+  is_published: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TutorialItemInput {
+  tutorial_id: string;
+  title: string;
+  title_ar?: string | null;
+  description?: string | null;
+  description_ar?: string | null;
+  youtube_url?: string | null;
+  link?: string | null;
+  thumbnail_url?: string | null;
+  resource_type?: string;
+  sort_order?: number;
+  is_published?: boolean;
+}
+
+export async function getPublishedTutorialItems(tutorialId: string): Promise<TutorialItem[]> {
+  const { data, error } = await supabase
+    .from('tutorial_items')
+    .select('*')
+    .eq('tutorial_id', tutorialId)
+    .eq('is_published', true)
+    .order('sort_order', { ascending: true });
+
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function adminGetTutorialItems(tutorialId: string): Promise<TutorialItem[]> {
+  await requireSession();
+  const { data, error } = await supabase
+    .from('tutorial_items')
+    .select('*')
+    .eq('tutorial_id', tutorialId)
+    .order('sort_order', { ascending: true });
+
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function adminCreateTutorialItem(input: TutorialItemInput): Promise<TutorialItem> {
+  await requireSession();
+  const videoId = input.youtube_url ? extractYouTubeId(input.youtube_url) : null;
+  const thumbnail = input.thumbnail_url?.trim() || (videoId ? youTubeThumbnail(videoId) : null);
+
+  const { data, error } = await supabase
+    .from('tutorial_items')
+    .insert({
+      tutorial_id: input.tutorial_id,
+      title: input.title,
+      title_ar: input.title_ar?.trim() || null,
+      description: input.description || null,
+      description_ar: input.description_ar?.trim() || null,
+      youtube_url: input.youtube_url || null,
+      link: input.link || null,
+      thumbnail_url: thumbnail,
+      resource_type: input.resource_type || 'watch',
+      sort_order: input.sort_order ?? 0,
+      is_published: input.is_published ?? true,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  emitDataChange('tutorial_items');
+  return data;
+}
+
+export async function adminUpdateTutorialItem(id: string, input: Partial<TutorialItemInput>): Promise<TutorialItem> {
+  await requireSession();
+  const videoId = input.youtube_url ? extractYouTubeId(input.youtube_url) : null;
+  const thumbnail = input.thumbnail_url?.trim() || (videoId ? youTubeThumbnail(videoId) : null);
+
+  const payload: any = { updated_at: new Date().toISOString() };
+  if (input.title !== undefined) payload.title = input.title;
+  if (input.title_ar !== undefined) payload.title_ar = input.title_ar?.trim() || null;
+  if (input.description !== undefined) payload.description = input.description || null;
+  if (input.description_ar !== undefined) payload.description_ar = input.description_ar?.trim() || null;
+  if (input.youtube_url !== undefined) payload.youtube_url = input.youtube_url || null;
+  if (input.link !== undefined) payload.link = input.link || null;
+  if (thumbnail !== undefined) payload.thumbnail_url = thumbnail;
+  if (input.resource_type !== undefined) payload.resource_type = input.resource_type;
+  if (input.sort_order !== undefined) payload.sort_order = input.sort_order;
+  if (input.is_published !== undefined) payload.is_published = input.is_published;
+
+  const { data, error } = await supabase
+    .from('tutorial_items')
+    .update(payload)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  emitDataChange('tutorial_items');
+  return data;
+}
+
+export async function adminDeleteTutorialItem(id: string): Promise<void> {
+  await requireSession();
+  const { error } = await supabase.from('tutorial_items').delete().eq('id', id);
+  if (error) throw error;
+  emitDataChange('tutorial_items');
 }
