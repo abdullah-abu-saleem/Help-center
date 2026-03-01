@@ -15,7 +15,7 @@ export default function NotFound() {
         <p className="text-slate-500 max-w-md mb-8">
           {t('pageNotFoundDesc')}
         </p>
-        <Link to="/help" className="px-6 py-3 bg-gradient-to-r from-primary-600 to-purple-600 text-white rounded-xl font-semibold hover:from-primary-700 hover:to-purple-700 transition-all shadow-soft hover:shadow-lg active:scale-[0.97]">
+        <Link to="/" className="px-6 py-3 bg-gradient-to-r from-primary-600 to-purple-600 text-white rounded-xl font-semibold hover:from-primary-700 hover:to-purple-700 transition-all shadow-soft hover:shadow-lg active:scale-[0.97]">
           {t('returnHome')}
         </Link>
       </div>

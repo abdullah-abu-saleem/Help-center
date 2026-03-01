@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
+import { Layout } from '../components/Layout';
 import { ResourcesGridView } from '../components/resources/ResourcesGridView';
 import { useI18n } from '../lib/i18n';
 import { getHcResourceVideos, type HcResourceVideo } from '../lib/helpCenterApi';
@@ -49,15 +51,20 @@ export default function TeacherResourcesAllPage() {
 
   if (error) {
     return (
-      <ResourcesGridView
-        videos={[]}
-        accentColor="#ED3B91"
-        backTo="/help/resources/teachers"
-        backLabel={lang === 'ar' ? 'العودة' : 'Back'}
-        title={lang === 'ar' ? <>جميع دروس <span className="gradient-text">المعلمين</span></> : <>All <span className="gradient-text">Teacher</span> Tutorials</>}
-        customThumbnails={{}}
-        loading={false}
-      />
+      <Layout>
+        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <svg style={{ width: 48, height: 48, color: '#ef4444', marginBottom: 16, opacity: 0.7 }} fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+          </svg>
+          <p style={{ fontSize: 15, color: '#ef4444', marginBottom: 16 }}>{error}</p>
+          <Link
+            to="/help/resources/teachers"
+            style={{ fontSize: 14, fontWeight: 600, color: '#ED3B91', textDecoration: 'none' }}
+          >
+            &larr; {lang === 'ar' ? 'العودة' : 'Back'}
+          </Link>
+        </div>
+      </Layout>
     );
   }
 

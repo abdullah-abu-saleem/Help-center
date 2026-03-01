@@ -3,7 +3,7 @@ import { useParams, Link, Navigate, NavLink, useNavigate } from 'react-router-do
 import { Layout } from '../components/Layout';
 import { ArticleGroup } from '../components/ArticleGroup';
 import { useI18n } from '../lib/i18n';
-import { FEATURE_CATEGORIES } from '../data';
+import { FEATURE_CATEGORIES, articles as staticArticles, sections as staticSections, categories as staticCategories } from '../data';
 import {
   getHcCategoryBySlug,
   getHcSectionBySlugs,
@@ -62,6 +62,10 @@ export default function RoleFeaturePage() {
       setLoaded(true);
       return;
     }
+
+    // Resolve correct sectionId for the current role
+    const effectiveSectionId = (feature as any).sectionIdByRole?.[role] || feature.sectionId;
+
     (async () => {
       try {
         const displayCatSlug = ROLE_DISPLAY_CATEGORY_SLUG[role];
@@ -75,16 +79,28 @@ export default function RoleFeaturePage() {
         ]);
         if (cancelled) return;
 
-        if (cat) setCategory(cat);
+        // Category: Supabase first, then static fallback
+        if (cat) {
+          setCategory(cat);
+        } else {
+          const staticSec = staticSections.find(s => s.id === effectiveSectionId);
+          const staticCat = staticCategories.find(c => c.slug === displayCatSlug) ||
+                            (staticSec ? staticCategories.find(c => c.id === staticSec.categoryId) : null);
+          if (staticCat) setCategory({ id: staticCat.id, slug: staticCat.slug, title: staticCat.title, title_ar: (staticCat as any).title_ar, description: staticCat.description || '', description_ar: (staticCat as any).description_ar || '', sort_order: staticCat.order || 0, is_published: true } as any);
+        }
+
         if (sec) {
           setSection({ ...sec, categoryId: sec.category_id, order: sec.sort_order });
 
           // Load groups + section articles
+          const contentCatId = sec.category_id;
+          console.log('[RoleFeaturePage] resolved IDs — category_id:', contentCatId, 'section.id:', sec.id, 'section.slug:', sec.slug);
           const [grps, secArts] = await Promise.all([
             getHcGroupsBySection(sec.id),
-            getHcArticlesBySection(sec.id),
+            getHcArticlesBySection(sec.id, contentCatId),
           ]);
           if (cancelled) return;
+          console.log('[RoleFeaturePage] articles.length:', secArts.length, 'groups.length:', grps.length);
 
           const mappedGroups = grps.map(g => ({
             id: g.id, sectionId: g.section_id,
@@ -94,6 +110,19 @@ export default function RoleFeaturePage() {
           }));
           setGroups(mappedGroups);
 
+          // Use Supabase articles; fall back to static data if empty
+          if (secArts.length > 0) {
+            setUngroupedArticles(secArts.map(a => ({
+              ...a, sectionId: a.section_id, groupId: (a as any).group_id,
+              bodyMarkdown: a.body_markdown, bodyMarkdown_ar: a.body_markdown_ar,
+              updatedAt: a.updated_at, tags: a.tags || [],
+            })));
+          } else {
+            const fallback = staticArticles.filter(a => a.sectionId === effectiveSectionId);
+            setUngroupedArticles(fallback as any[]);
+          }
+
+          // Also load per-group articles if groups exist
           if (grps.length > 0) {
             const gMap = new Map<string, any[]>();
             for (const g of grps) {
@@ -106,12 +135,14 @@ export default function RoleFeaturePage() {
               })));
             }
             setGroupArticlesMap(gMap);
-          } else {
-            setUngroupedArticles(secArts.map(a => ({
-              ...a, sectionId: a.section_id, groupId: (a as any).group_id,
-              bodyMarkdown: a.body_markdown, bodyMarkdown_ar: a.body_markdown_ar,
-              updatedAt: a.updated_at, tags: a.tags || [],
-            })));
+          }
+        } else {
+          // Section not in Supabase — fall back to static data
+          const staticSec = staticSections.find(s => s.id === effectiveSectionId);
+          if (staticSec) {
+            setSection({ id: staticSec.id, slug: staticSec.slug, title: staticSec.title, title_ar: (staticSec as any).title_ar, description: staticSec.description || '', description_ar: (staticSec as any).description_ar || '', category_id: staticSec.categoryId, categoryId: staticSec.categoryId, sort_order: staticSec.order || 0, order: staticSec.order || 0, is_published: true } as any);
+            const fallback = staticArticles.filter(a => a.sectionId === effectiveSectionId);
+            setUngroupedArticles(fallback as any[]);
           }
         }
       } catch (err: any) {
@@ -153,7 +184,7 @@ export default function RoleFeaturePage() {
     return <Navigate to="/404" replace />;
   }
 
-  const hasGroups = groups.length > 0;
+  const hasGroupArticles = groups.length > 0 && Array.from(groupArticlesMap.values()).some(arts => arts.length > 0);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -216,7 +247,7 @@ export default function RoleFeaturePage() {
                               <svg className="w-3 h-3 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg>
                               {localize(fc, 'title')}
                             </div>
-                            {hasGroups && (
+                            {hasGroupArticles && (
                               <ul className="ml-5 mt-1 space-y-0.5 border-l-2 border-primary-200/60 pl-4 mb-3">
                                 {groups.map(group => (
                                   <li key={group.id}>
@@ -281,7 +312,7 @@ export default function RoleFeaturePage() {
               </div>
 
               {/* Article list */}
-              {hasGroups ? (
+              {hasGroupArticles ? (
                 <div className="w-full divide-y divide-slate-200/70">
                   {groups.map((group) => {
                     const groupArticles = groupArticlesMap.get(group.id) || [];

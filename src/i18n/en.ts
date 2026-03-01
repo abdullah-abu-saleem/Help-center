@@ -277,6 +277,18 @@ export const en = {
   tourDone: "Done",
   tourReplay: "Replay Tour",
 
+  // Resources Landing page
+  resLandingTitle: "Resources",
+  resLandingSubtitle: "Choose your role to explore curated video tutorials and guides.",
+  resTeacherCardDesc: "Guides, tutorials & classroom tools",
+  resStudentCardDesc: "Learning tips & how-to videos",
+  resSignInBtn: "Sign in",
+  resSignInSub: "Access your dashboard & continue learning",
+  resErrorMessage: "Something went wrong while loading resources. Please try again later.",
+  resRetry: "Retry",
+  resNoVideos: "No videos yet for this audience",
+  resInvalidAudience: "Invalid audience",
+
   // Blog
   blogTitle: "String Blog",
   blogSubtitle: "Latest updates, teaching tips, and product announcements.",

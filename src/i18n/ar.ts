@@ -277,6 +277,18 @@ export const ar = {
   tourDone: "تم",
   tourReplay: "إعادة الجولة",
 
+  // Resources Landing page
+  resLandingTitle: "الموارد",
+  resLandingSubtitle: "اختر دورك لاستكشاف دروس الفيديو والأدلة المنسقة.",
+  resTeacherCardDesc: "أدلة ودروس وأدوات صفية",
+  resStudentCardDesc: "نصائح تعليمية وفيديوهات إرشادية",
+  resSignInBtn: "تسجيل الدخول",
+  resSignInSub: "ادخل إلى لوحتك التعليمية واستمر في التعلم",
+  resErrorMessage: "حدث خطأ أثناء تحميل الموارد. يرجى المحاولة لاحقاً.",
+  resRetry: "إعادة المحاولة",
+  resNoVideos: "لا توجد فيديوهات لهذا الجمهور حتى الآن",
+  resInvalidAudience: "جمهور غير صالح",
+
   // Blog
   blogTitle: "مدونة سترينج",
   blogSubtitle: "آخر التحديثات ونصائح التدريس وإعلانات المنتجات.",

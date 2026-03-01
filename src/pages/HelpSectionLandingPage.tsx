@@ -49,12 +49,14 @@ export default function HelpSectionLandingPage() {
         if (catData) setDbCategory(catData);
 
         const catId = catData?.id || sec.category_id;
+        console.log('[HelpSectionLandingPage] resolved IDs — category.id:', catId, 'section.id:', sec.id, 'section.slug:', sec.slug);
         const [siblings, grps, secArts] = await Promise.all([
           getHcSectionsByCategory(catId),
           getHcGroupsBySection(sec.id),
-          getHcArticlesBySection(sec.id),
+          getHcArticlesBySection(sec.id, catId),
         ]);
         if (cancelled) return;
+        console.log('[HelpSectionLandingPage] articles.length:', secArts.length, 'groups.length:', grps.length);
 
         setDbSiblingSections(siblings);
         setDbGroups(grps);
@@ -141,10 +143,11 @@ export default function HelpSectionLandingPage() {
   // Data loading (Supabase only)
   const groups = dbGroups.map(g => ({ id: g.id, sectionId: g.section_id, title: g.title, title_ar: g.title_ar, description: g.description, description_ar: g.description_ar, order: g.sort_order }));
   const siblingSections = dbSiblingSections.map(s => ({ ...s, categoryId: s.category_id, order: s.sort_order })) as any[];
-  const hasGroups = groups.length > 0;
-  const ungroupedArticles = !hasGroups
-    ? dbUngroupedArticles.map(a => ({ ...a, sectionId: a.section_id, groupId: (a as any).group_id, bodyMarkdown: a.body_markdown, bodyMarkdown_ar: a.body_markdown_ar, updatedAt: a.updated_at, tags: a.tags || [] })) as any[]
-    : [];
+  // Check if groups actually contain articles (groups may exist but be empty)
+  const hasGroupArticles = groups.length > 0 && Array.from(dbGroupArticles.values()).some(arts => arts.length > 0);
+  const allSectionArticles = dbUngroupedArticles.map(a => ({ ...a, sectionId: a.section_id, groupId: (a as any).group_id, bodyMarkdown: a.body_markdown, bodyMarkdown_ar: a.body_markdown_ar, updatedAt: a.updated_at, tags: a.tags || [] })) as any[];
+  // Show ungrouped articles when there are no groups OR when groups exist but have no articles
+  const ungroupedArticles = hasGroupArticles ? [] : allSectionArticles;
 
   return (
     <Layout hero={SearchStrip}>
@@ -181,7 +184,7 @@ export default function HelpSectionLandingPage() {
                               <svg className="w-3 h-3 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg>
                               {localize(sibSection, 'title')}
                             </div>
-                            {hasGroups && (
+                            {hasGroupArticles && (
                               <ul className="ml-5 mt-1 space-y-0.5 border-l-2 border-primary-200/60 pl-4 mb-3">
                                 {groups.map(group => (
                                   <li key={group.id}>
@@ -233,7 +236,8 @@ export default function HelpSectionLandingPage() {
                 )}
               </header>
 
-              {/* Mobile Nav */}
+              {/* Mobile Nav — only when groups have articles */}
+              {hasGroupArticles && (
               <div className="lg:hidden mb-8 border border-slate-200/50 rounded-xl p-4 bg-transparent">
                 <div className="font-bold mb-2 text-slate-700 text-sm">{t('sectionMenu')}</div>
                 <select
@@ -247,9 +251,10 @@ export default function HelpSectionLandingPage() {
                   {groups.map(g => <option key={g.id} value={`group-${g.id}`}>{localize(g, 'title')}</option>)}
                 </select>
               </div>
+              )}
 
-              {/* Link list — grouped */}
-              {hasGroups ? (
+              {/* Link list — grouped (only when groups actually have articles) */}
+              {hasGroupArticles ? (
                 <div className="space-y-10">
                   {groups.map((group) => {
                     const groupArticles = (dbGroupArticles.get(group.id) || []).map((a: any) => ({ ...a, sectionId: a.section_id, groupId: a.group_id, bodyMarkdown: a.body_markdown || '', updatedAt: a.updated_at || '', tags: a.tags || [] }));

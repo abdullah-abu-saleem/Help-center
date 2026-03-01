@@ -26,6 +26,10 @@ export interface CategoryCardProps {
   linkTo?: string;
   /** When provided the card renders admin overlay actions instead of "Explore" */
   adminActions?: CategoryCardAdminActions;
+  /** Admin mode: handle single-click (e.g. navigate to management page) */
+  onSingleClick?: () => void;
+  /** Admin mode: handle double-click (e.g. open edit modal) */
+  onDoubleClick?: () => void;
 }
 
 /* ── Component ────────────────────────────────────────────────────────────── */
@@ -36,12 +40,20 @@ export function CategoryCard({
   lang = 'en',
   linkTo,
   adminActions,
+  onSingleClick,
+  onDoubleClick,
 }: CategoryCardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const localized = (en: string, ar: string | null | undefined) =>
-    lang === 'ar' && ar ? ar : en;
+    lang === 'ar' ? (ar || en) : (en || ar || '');
+
+  // Cleanup click timer on unmount
+  useEffect(() => {
+    return () => { if (clickTimer.current) clearTimeout(clickTimer.current); };
+  }, []);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -226,10 +238,51 @@ export function CategoryCard({
 
   const animDelay = `${0.1 + index * 0.08}s`;
 
-  if (adminActions) {
+  /* ── Admin click-handler mode (looks identical to public, custom click behavior) ── */
+
+  if (onSingleClick || onDoubleClick) {
+    const handleClick = () => {
+      if (clickTimer.current) {
+        clearTimeout(clickTimer.current);
+        clickTimer.current = null;
+        return;
+      }
+      clickTimer.current = setTimeout(() => {
+        clickTimer.current = null;
+        onSingleClick?.();
+      }, 250);
+    };
+
+    const handleDblClick = () => {
+      if (clickTimer.current) {
+        clearTimeout(clickTimer.current);
+        clickTimer.current = null;
+      }
+      onDoubleClick?.();
+    };
+
     return (
       <div
-        className="group card-modern flex flex-col fade-up"
+        className="group card-modern flex flex-col fade-up cursor-pointer"
+        style={{
+          padding: 0,
+          minHeight: 200,
+          animationDelay: animDelay,
+          textDecoration: 'none',
+        }}
+        onClick={handleClick}
+        onDoubleClick={handleDblClick}
+      >
+        {cardBody}
+      </div>
+    );
+  }
+
+  if (adminActions) {
+    return (
+      <Link
+        to={adminActions.editTo}
+        className="group card-modern flex flex-col fade-up cursor-pointer"
         style={{
           padding: 0,
           minHeight: 200,
@@ -241,7 +294,7 @@ export function CategoryCard({
       >
         {adminOverlay}
         {cardBody}
-      </div>
+      </Link>
     );
   }
 

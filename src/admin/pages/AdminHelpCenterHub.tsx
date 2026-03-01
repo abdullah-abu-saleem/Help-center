@@ -3,7 +3,10 @@ import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-do
 import { supabase } from '../../lib/supabase';
 import {
   adminGetAllCategories,
+  adminGetAllSections,
+  adminGetAllArticles,
   adminDeleteCategory,
+  adminUpdateCategory,
   adminSeedDefaultCategories,
   adminSeedDefaultSections,
   adminGetSectionCount,
@@ -25,6 +28,17 @@ export default function AdminHelpCenterHub() {
   const [search, setSearch] = useState('');
   const [filterActive, setFilterActive] = useState<'all' | 'active' | 'inactive'>('all');
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // ── Edit Category Modal state ──
+  const [editingCategory, setEditingCategory] = useState<HcCategory | null>(null);
+  const [editForm, setEditForm] = useState({
+    title: '', title_ar: '', description: '', description_ar: '',
+    icon: '', sort_order: 0, is_published: true,
+  });
+  const [editSaving, setEditSaving] = useState(false);
+
+  // ── Data consistency stats ──
+  const [dbStats, setDbStats] = useState<{ categories: number; sections: number; articles: number } | null>(null);
 
   // ── Success toast from URL params ──
   useEffect(() => {
@@ -59,6 +73,15 @@ export default function AdminHelpCenterHub() {
       }
 
       setCategories(data);
+
+      // Fetch consistency stats in parallel
+      try {
+        const [allSecs, allArts] = await Promise.all([
+          adminGetAllSections(),
+          adminGetAllArticles(),
+        ]);
+        setDbStats({ categories: data.length, sections: allSecs.length, articles: allArts.length });
+      } catch { /* stats are non-critical */ }
 
       // Auto-seed default sections if any category exists but has no sections
       if (data.length > 0) {
@@ -108,6 +131,50 @@ export default function AdminHelpCenterHub() {
   const handleLogout = async () => {
     try { await supabase.auth.signOut(); } catch {}
     navigate('/admin/login', { replace: true });
+  };
+
+  // ── Edit Category modal helpers ──
+  const openEditModal = (cat: HcCategory) => {
+    setEditForm({
+      title: cat.title,
+      title_ar: cat.title_ar || '',
+      description: cat.description,
+      description_ar: cat.description_ar || '',
+      icon: cat.icon || '',
+      sort_order: cat.sort_order,
+      is_published: cat.is_published,
+    });
+    setEditingCategory(cat);
+  };
+
+  const closeEditModal = () => {
+    setEditingCategory(null);
+    setEditSaving(false);
+  };
+
+  const handleEditSave = async () => {
+    if (!editingCategory) return;
+    if (!editForm.title.trim()) { setError('Title is required.'); return; }
+    try {
+      setEditSaving(true);
+      await adminUpdateCategory(editingCategory.id, {
+        title: editForm.title.trim(),
+        title_ar: editForm.title_ar.trim() || null,
+        description: editForm.description.trim(),
+        description_ar: editForm.description_ar.trim() || null,
+        icon: editForm.icon.trim(),
+        sort_order: editForm.sort_order,
+        is_published: editForm.is_published,
+      });
+      setSuccessMsg('Category updated successfully!');
+      setTimeout(() => setSuccessMsg(null), 4000);
+      closeEditModal();
+      fetchCategories();
+    } catch (err: any) {
+      if (isSessionError(err)) { navigate('/admin/login', { replace: true }); return; }
+      setError(err.message || 'Failed to update category.');
+      setEditSaving(false);
+    }
   };
 
   // ── Filtered categories ──
@@ -201,6 +268,18 @@ export default function AdminHelpCenterHub() {
           </Link>
         </div>
 
+        {/* Data Consistency Stats */}
+        {dbStats && (
+          <div className="mb-6 px-4 py-2.5 rounded-lg bg-slate-50 border border-slate-200/60 text-xs text-slate-500 flex items-center gap-4">
+            <span className="font-medium text-slate-600">Supabase:</span>
+            <span>{dbStats.categories} categories</span>
+            <span className="text-slate-300">|</span>
+            <span>{dbStats.sections} sections</span>
+            <span className="text-slate-300">|</span>
+            <span>{dbStats.articles} articles</span>
+          </div>
+        )}
+
         {/* Header + New Category Button */}
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -290,20 +369,138 @@ export default function AdminHelpCenterHub() {
                 key={cat.id}
                 category={cat}
                 index={idx}
-                adminActions={{
-                  viewHref: `/#/help/category/${cat.slug}`,
-                  sectionsTo: `/admin/help-center/sections?category=${cat.id}`,
-                  editTo: `/admin/help-center/category/${cat.id}/edit`,
-                  onDelete: () => setDeleteConfirm(cat.id),
-                  deleteConfirm: deleteConfirm === cat.id,
-                  onDeleteConfirm: () => handleDelete(cat.id),
-                  onDeleteCancel: () => setDeleteConfirm(null),
-                }}
+                lang="en"
+                onSingleClick={() => navigate(`/admin/help-center/category/${cat.id}/manage`)}
+                onDoubleClick={() => openEditModal(cat)}
               />
             ))}
           </CategoryGrid>
         )}
       </main>
+
+      {/* ── Edit Category Modal ── */}
+      {editingCategory && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
+          onClick={closeEditModal}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <h3 className="text-lg font-bold text-slate-900">Edit Category</h3>
+              <button onClick={closeEditModal} className="text-slate-400 hover:text-slate-600 transition-colors">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
+              {/* Title */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Title (English)</label>
+                <input
+                  type="text"
+                  value={editForm.title}
+                  onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all"
+                />
+              </div>
+
+              {/* Title AR */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Title (Arabic)</label>
+                <input
+                  type="text"
+                  dir="rtl"
+                  value={editForm.title_ar}
+                  onChange={(e) => setEditForm((f) => ({ ...f, title_ar: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all"
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Description (English)</label>
+                <textarea
+                  rows={2}
+                  value={editForm.description}
+                  onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all resize-none"
+                />
+              </div>
+
+              {/* Description AR */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Description (Arabic)</label>
+                <textarea
+                  rows={2}
+                  dir="rtl"
+                  value={editForm.description_ar}
+                  onChange={(e) => setEditForm((f) => ({ ...f, description_ar: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all resize-none"
+                />
+              </div>
+
+              {/* Icon + Sort Order */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Icon</label>
+                  <input
+                    type="text"
+                    value={editForm.icon}
+                    onChange={(e) => setEditForm((f) => ({ ...f, icon: e.target.value }))}
+                    placeholder="e.g. folder"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Sort Order</label>
+                  <input
+                    type="number"
+                    value={editForm.sort_order}
+                    onChange={(e) => setEditForm((f) => ({ ...f, sort_order: Number(e.target.value) || 0 }))}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Published */}
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={editForm.is_published}
+                  onChange={(e) => setEditForm((f) => ({ ...f, is_published: e.target.checked }))}
+                  className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <span className="text-sm font-medium text-slate-700">Published</span>
+              </label>
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100">
+              <button
+                onClick={closeEditModal}
+                className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEditSave}
+                disabled={editSaving}
+                className="px-5 py-2 text-sm font-semibold text-white rounded-lg transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+                style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
+              >
+                {editSaving ? 'Saving\u2026' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -67,12 +67,17 @@ export default function AdminCategoryEditor() {
 
     setSaving(true);
     try {
+      const titleEn = form.title.trim();
+      const titleAr = form.title_ar.trim();
+      const descEn = form.description.trim();
+      const descAr = form.description_ar.trim();
+
       const payload = {
         slug: form.slug.trim().toLowerCase().replace(/\s+/g, '-'),
-        title: form.title.trim(),
-        title_ar: form.title_ar.trim() || null,
-        description: form.description.trim(),
-        description_ar: form.description_ar.trim() || null,
+        title: titleEn || titleAr,
+        title_ar: titleAr || titleEn || null,
+        description: descEn || descAr,
+        description_ar: descAr || descEn || null,
         icon: form.icon.trim() || 'folder',
         sort_order: form.sort_order,
         is_published: form.is_published,

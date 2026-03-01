@@ -74,7 +74,11 @@ export default function HelpCenterArticle() {
   const secSlug = sec?.slug || sectionSlug || '';
   const secTitle = sec ? localized(sec.title, sec.title_ar) : 'Section';
 
-  const body = localized(article.body_markdown, article.body_markdown_ar);
+  // Priority: body_markdown > content (with language fallback)
+  const body =
+    localized(article.body_markdown, article.body_markdown_ar) ||
+    localized(article.content, article.content_ar) ||
+    '';
 
   return (
     <Layout>

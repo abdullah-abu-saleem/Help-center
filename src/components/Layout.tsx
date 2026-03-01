@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useI18n } from '../lib/i18n';
 import { SubmitRequestModal } from './SubmitRequestModal';
-import { ResourcesDropdown } from './ResourcesDropdown';
 import StringIcon from './icons/StringIcon';
 
 interface LayoutProps {
@@ -49,27 +48,26 @@ const LanguageDropdown = () => {
 
 export const Header = ({ onOpenRequest }: { onOpenRequest: () => void }) => {
   const { t, dir } = useI18n();
+  const location = useLocation();
+
+  const isResourcesRoute = location.pathname.startsWith('/resources');
+  const brandLabel = isResourcesRoute ? 'Resources' : t('helpCenter');
+  const brandLink = isResourcesRoute ? '/resources' : '/help';
 
   return (
     <header className="sticky top-0 z-50 w-full glass-header h-[70px]">
       <div className="container mx-auto flex h-full items-center justify-between px-6 md:px-8">
         {/* Left: Logo & Title */}
-        <Link to="/help" className="flex items-center gap-2.5 group">
+        <Link to={brandLink} className="flex items-center gap-2.5 group">
           <StringIcon size={32} className="flex-shrink-0 transition-transform duration-200 group-hover:scale-110" />
           <div className="flex items-center gap-1.5 leading-none">
             <span className="text-lg font-bold tracking-tight text-slate-900">String</span>
-            <span className="text-lg text-slate-400 font-light">{t('helpCenter')}</span>
+            <span className="text-lg text-slate-400 font-light">{brandLabel}</span>
           </div>
         </Link>
 
         {/* Right: Links & Actions */}
         <div className="flex items-center gap-3 md:gap-5">
-          <Link to="/blog" className="hidden md:block text-sm font-medium text-slate-500 hover:text-[#ED3B91] transition-colors">
-            Blog
-          </Link>
-
-          <ResourcesDropdown />
-
           <a href="https://string.education" target="_blank" rel="noreferrer" className="hidden md:block text-sm font-medium text-slate-500 hover:text-primary-600 transition-colors">
             {t('stringWebsite')}
           </a>

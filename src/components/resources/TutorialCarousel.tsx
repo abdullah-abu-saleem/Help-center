@@ -164,14 +164,14 @@ export const TutorialCarousel: React.FC<TutorialCarouselProps> = ({
       <style>{`
         .res-carousel-track::-webkit-scrollbar { display: none; }
         .res-card-slot {
-          flex: 0 0 380px;
+          flex: 0 0 440px;
           scroll-snap-align: start;
         }
         @media (max-width: 900px) {
-          .res-card-slot { flex: 0 0 340px; }
+          .res-card-slot { flex: 0 0 400px; }
         }
         @media (max-width: 640px) {
-          .res-card-slot { flex: 0 0 85vw; }
+          .res-card-slot { flex: 0 0 90vw; }
         }
       `}</style>
     </section>

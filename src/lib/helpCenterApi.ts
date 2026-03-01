@@ -76,10 +76,15 @@ export interface HcSection {
 
 export interface HcArticle {
   id: string;
+  category_id: string;
   section_id: string;
   slug: string;
   title: string;
   title_ar: string | null;
+  excerpt: string;
+  excerpt_ar: string | null;
+  content: string;
+  content_ar: string | null;
   summary: string;
   summary_ar: string | null;
   body_markdown: string;
@@ -87,6 +92,9 @@ export interface HcArticle {
   sort_order: number;
   is_published: boolean;
   tags: string[];
+  role: string | null;
+  is_top: boolean;
+  is_featured: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -105,7 +113,7 @@ export interface HcGroup {
 
 export interface HcResourceVideo {
   id: string;
-  audience: 'teacher' | 'student';
+  section: 'teacher' | 'student';
   title: string;
   title_ar: string | null;
   description: string;
@@ -194,16 +202,26 @@ export async function getHcSectionBySlug(
   return (data as HcSectionWithCategory) || null;
 }
 
-/** Fetch published articles for a given section (public). */
-export async function getHcArticlesBySection(sectionId: string): Promise<HcArticle[]> {
-  const { data, error } = await supabasePublic
+/** Fetch published articles for a given section (public).
+ *  Optionally also filter by category_id for extra specificity. */
+export async function getHcArticlesBySection(sectionId: string, categoryId?: string): Promise<HcArticle[]> {
+  console.log('[helpCenterApi] getHcArticlesBySection — sectionId:', sectionId, 'categoryId:', categoryId ?? '(none)');
+  let query = supabasePublic
     .from('hc_articles')
     .select('*')
     .eq('section_id', sectionId)
-    .eq('is_published', true)
-    .order('sort_order', { ascending: true });
+    .eq('is_published', true);
 
-  if (error) throw error;
+  if (categoryId) {
+    query = query.eq('category_id', categoryId);
+  }
+
+  const { data, error } = await query
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true });
+
+  if (error) { console.error('[helpCenterApi] getHcArticlesBySection error:', error); throw error; }
+  console.log('[helpCenterApi] getHcArticlesBySection returned', data?.length, 'rows');
   return data || [];
 }
 
@@ -220,16 +238,25 @@ export async function getHcArticleBySlug(slug: string): Promise<HcArticleWithSec
   return (data as HcArticleWithSection) || null;
 }
 
-/** Fetch groups for a given section (public). */
+/** Fetch groups for a given section (public).
+ *  Safe: returns [] if hc_groups table is missing or inaccessible. */
 export async function getHcGroupsBySection(sectionId: string): Promise<HcGroup[]> {
-  const { data, error } = await supabasePublic
-    .from('hc_groups')
-    .select('*')
-    .eq('section_id', sectionId)
-    .order('sort_order', { ascending: true });
+  try {
+    const { data, error } = await supabasePublic
+      .from('hc_groups')
+      .select('*')
+      .eq('section_id', sectionId)
+      .order('sort_order', { ascending: true });
 
-  if (error) throw error;
-  return data || [];
+    if (error) {
+      console.warn('[helpCenterApi] getHcGroupsBySection error (non-fatal):', error.message);
+      return [];
+    }
+    return data || [];
+  } catch (err) {
+    console.warn('[helpCenterApi] getHcGroupsBySection failed (non-fatal):', err);
+    return [];
+  }
 }
 
 /** Fetch published articles for a given group (public). */
@@ -357,18 +384,33 @@ export async function searchHcArticles(query: string): Promise<HcArticle[]> {
   return data || [];
 }
 
-/** Fetch published resource videos by audience (public). */
-export async function getHcResourceVideos(audience: 'teacher' | 'student'): Promise<HcResourceVideo[]> {
-  console.log('[helpCenterApi] getHcResourceVideos:', audience);
+/** Fetch published resource videos by section (public).
+ *  Safe fallback: if is_published column is missing, retries without it.
+ *  Sorts by created_at DESC (newest first). */
+export async function getHcResourceVideos(section: 'teacher' | 'student'): Promise<HcResourceVideo[]> {
+  console.log('[helpCenterApi] getHcResourceVideos:', section);
   const { data, error } = await supabasePublic
     .from('hc_videos')
     .select('*')
-    .eq('audience', audience)
+    .eq('section', section)
     .eq('is_published', true)
-    .order('sort_order', { ascending: true })
     .order('created_at', { ascending: false });
 
-  if (error) { console.error('[helpCenterApi] getHcResourceVideos error:', error); throw error; }
+  if (error) {
+    // 42703 = undefined_column — is_published or created_at may not exist yet
+    if (error.code === '42703') {
+      console.warn('[helpCenterApi] getHcResourceVideos fallback — column missing, retrying without is_published/created_at order');
+      const { data: fallback, error: fbErr } = await supabasePublic
+        .from('hc_videos')
+        .select('*')
+        .eq('section', section);
+      if (fbErr) { console.error('[helpCenterApi] getHcResourceVideos fallback error:', fbErr); throw fbErr; }
+      console.log('[helpCenterApi] getHcResourceVideos (fallback) returned', fallback?.length, 'rows');
+      return fallback || [];
+    }
+    console.error('[helpCenterApi] getHcResourceVideos error:', error);
+    throw error;
+  }
   console.log('[helpCenterApi] getHcResourceVideos returned', data?.length, 'rows');
   return data || [];
 }
@@ -380,8 +422,8 @@ export async function adminGetAllResourceVideos(): Promise<HcResourceVideo[]> {
     const { data, error } = await supabase
       .from('hc_videos')
       .select('*')
-      .order('audience')
-      .order('sort_order', { ascending: true });
+      .order('section')
+      .order('created_at', { ascending: false });
     if (error) throw error;
     return data || [];
   })(), 15_000, 'adminGetAllResourceVideos');
@@ -727,14 +769,22 @@ export async function adminCreateArticle(input: ArticleInput): Promise<HcArticle
 
 export async function adminUpdateArticle(id: string, updates: Partial<ArticleInput>): Promise<HcArticle> {
   return raceTimeout((async () => {
-    const session = await requireSession();
-    if (import.meta.env.DEV) console.log('[adminUpdateArticle] PATCH id=', id);
+    await requireSession();
+    console.log('[adminUpdateArticle] updating id=', id, 'fields:', Object.keys(updates));
 
-    await patchRow('hc_articles', id, updates as Record<string, unknown>, session.access_token);
+    const { data, error } = await supabase
+      .from('hc_articles')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
 
-    if (import.meta.env.DEV) console.log('[adminUpdateArticle] OK');
+    if (error) throw error;
+    if (!data) throw new Error('Article not found or update failed — 0 rows affected');
+
+    console.log('[adminUpdateArticle] OK — id:', data.id, 'updated_at:', data.updated_at);
     emitDataChange('hc_articles');
-    return { id, ...updates } as unknown as HcArticle;
+    return data;
   })(), 15_000, 'adminUpdateArticle');
 }
 

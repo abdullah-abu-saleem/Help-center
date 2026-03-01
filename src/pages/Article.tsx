@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, Navigate, Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -12,6 +12,8 @@ import {
   getHcArticlesBySection,
 } from '../lib/helpCenterApi';
 import { formatDate, uniqueSlugIds, scrollToHash } from '../lib/utils';
+import { useDataRefresh } from '../lib/dataEvents';
+import { articles as staticArticles, sections as staticSections, categories as staticCategories } from '../data';
 
 // ── Stable references (defined outside component to prevent re-renders) ──
 const REMARK_PLUGINS = [remarkGfm];
@@ -38,6 +40,10 @@ export default function ArticlePage() {
   const [dbSectionArticles, setDbSectionArticles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // Auto-refresh when admin saves articles (same tab or cross-tab)
+  const [refreshKey, setRefreshKey] = useState(0);
+  useDataRefresh(['hc_articles'], useCallback(() => setRefreshKey(k => k + 1), []));
 
   // Navigation State
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -68,7 +74,23 @@ export default function ArticlePage() {
       try {
         const art = await getHcArticleBySlugFull(articleSlug || '');
         if (cancelled) return;
-        if (!art) { setLoading(false); return; }
+        if (!art) {
+          // Fall back to static data when article is not in Supabase
+          const staticArt = staticArticles.find(a => a.slug === articleSlug);
+          if (staticArt) {
+            setArticle(staticArt);
+            const staticSec = staticSections.find(s => s.id === staticArt.sectionId);
+            if (staticSec) {
+              setSection({ id: staticSec.id, categoryId: staticSec.categoryId, slug: staticSec.slug, title: staticSec.title, title_ar: (staticSec as any).title_ar, description: staticSec.description || '', order: staticSec.order || 0 });
+              const staticCat = staticCategories.find(c => c.id === staticSec.categoryId);
+              if (staticCat) {
+                setCategory({ id: staticCat.id, slug: staticCat.slug, title: staticCat.title, title_ar: (staticCat as any).title_ar, description: staticCat.description || '', order: staticCat.order || 0, icon: (staticCat as any).icon || '' });
+              }
+            }
+          }
+          setLoading(false);
+          return;
+        }
 
         // Map article to UI shape
         const mappedArticle = {
@@ -123,7 +145,7 @@ export default function ArticlePage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [articleSlug]);
+  }, [articleSlug, refreshKey]);
 
   // Generate TOC & Set up Observer
   useEffect(() => {

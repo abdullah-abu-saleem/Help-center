@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useNavigate, useParams, Link, useSearchParams } from 'react-router-dom';
 import {
   adminGetArticleById,
   adminGetAllCategories,
   adminGetSectionsByCategory,
   adminCreateArticle,
   adminUpdateArticle,
+  adminDeleteArticle,
   isSessionError,
   type HcCategory,
   type HcSection,
@@ -14,7 +15,13 @@ import {
 export default function AdminArticleEditorFlat() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const isNew = !id;
+
+  // returnTo support — navigate back to category management page after save/delete
+  const returnTo = searchParams.get('returnTo') || '/admin/help-center/articles';
+  const presetCategoryId = searchParams.get('categoryId') || '';
+  const presetSectionId = searchParams.get('sectionId') || '';
 
   const [categories, setCategories] = useState<HcCategory[]>([]);
   const [sections, setSections] = useState<HcSection[]>([]);
@@ -37,6 +44,8 @@ export default function AdminArticleEditorFlat() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -81,6 +90,20 @@ export default function AdminArticleEditorFlat() {
               setSection(sec);
             }
           }
+        } else if (isNew && presetCategoryId) {
+          // Pre-select category and section from URL params (coming from category management page)
+          setSelectedCategoryId(presetCategoryId);
+          const cat = cats.find((c) => c.id === presetCategoryId) || null;
+          setCategory(cat);
+          if (cat) {
+            const secs = await adminGetSectionsByCategory(cat.id);
+            setSections(secs);
+            if (presetSectionId) {
+              setForm((f) => ({ ...f, section_id: presetSectionId }));
+              const sec = secs.find((s) => s.id === presetSectionId) || null;
+              setSection(sec);
+            }
+          }
         }
       } catch (err: any) {
         setError(err.message || 'Failed to load data.');
@@ -89,7 +112,7 @@ export default function AdminArticleEditorFlat() {
       }
     };
     load();
-  }, [id, isNew]);
+  }, [id, isNew, presetCategoryId, presetSectionId]);
 
   // When category changes, load sections for that category
   const handleCategoryChange = async (catId: string) => {
@@ -138,7 +161,12 @@ export default function AdminArticleEditorFlat() {
 
     setSaving(true);
     try {
+      // Derive category_id from selected section
+      const matchedSection = sections.find(s => s.id === form.section_id);
+      const categoryId = matchedSection?.category_id || selectedCategoryId;
+
       const payload = {
+        category_id: categoryId || undefined,
         section_id: form.section_id,
         slug: form.slug.trim().toLowerCase().replace(/\s+/g, '-'),
         title: form.title.trim(),
@@ -157,11 +185,15 @@ export default function AdminArticleEditorFlat() {
 
       if (isNew) {
         await adminCreateArticle(payload);
-        navigate('/admin/help-center/articles?success=created');
+        navigate(returnTo === '/admin/help-center/articles' ? '/admin/help-center/articles?success=created' : returnTo);
       } else {
         await adminUpdateArticle(id!, payload);
-        const action = publish === true ? 'published' : publish === false ? 'unpublished' : 'updated';
-        navigate(`/admin/help-center/articles?success=${action}`);
+        if (returnTo !== '/admin/help-center/articles') {
+          navigate(returnTo);
+        } else {
+          const action = publish === true ? 'published' : publish === false ? 'unpublished' : 'updated';
+          navigate(`/admin/help-center/articles?success=${action}`);
+        }
       }
     } catch (err: any) {
       if (isSessionError(err)) {
@@ -186,6 +218,24 @@ export default function AdminArticleEditorFlat() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!id) return;
+    setDeleting(true);
+    try {
+      await adminDeleteArticle(id);
+      navigate(returnTo === '/admin/help-center/articles' ? '/admin/help-center/articles?success=deleted' : returnTo);
+    } catch (err: any) {
+      if (isSessionError(err)) {
+        navigate('/admin/login', { replace: true });
+        return;
+      }
+      setError(err.message || 'Failed to delete article.');
+      setDeleteConfirm(false);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center glass-bg">
@@ -204,7 +254,7 @@ export default function AdminArticleEditorFlat() {
         <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
-              to="/admin/help-center/articles"
+              to={returnTo}
               className="text-slate-400 hover:text-slate-600 transition-colors"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -398,12 +448,42 @@ export default function AdminArticleEditorFlat() {
 
           {/* Actions */}
           <div className="flex items-center justify-between">
-            <Link
-              to="/admin/help-center/articles"
-              className="text-sm text-slate-500 hover:text-slate-700 transition-colors"
-            >
-              Cancel
-            </Link>
+            <div className="flex items-center gap-3">
+              <Link
+                to={returnTo}
+                className="text-sm text-slate-500 hover:text-slate-700 transition-colors"
+              >
+                Cancel
+              </Link>
+              {/* Delete (only when editing) */}
+              {!isNew && (
+                deleteConfirm ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-red-500 font-medium">Delete this article?</span>
+                    <button
+                      onClick={handleDelete}
+                      disabled={deleting}
+                      className="px-3 py-1.5 text-xs font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
+                    >
+                      {deleting ? 'Deleting...' : 'Confirm'}
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirm(false)}
+                      className="px-3 py-1.5 text-xs font-medium text-slate-500 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setDeleteConfirm(true)}
+                    className="text-sm text-red-400 hover:text-red-600 transition-colors"
+                  >
+                    Delete
+                  </button>
+                )
+              )}
+            </div>
             <div className="flex items-center gap-3">
               {/* Unpublish (only when editing a published article) */}
               {!isNew && form.is_published && (

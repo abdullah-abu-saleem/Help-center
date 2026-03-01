@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import React from 'react';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { I18nProvider } from './lib/i18n';
 import { AuthProvider } from './lib/auth';
-import { supabase } from './lib/supabase';
 
 import Home from './pages/Home';
 import CategoryPage from './pages/Category';
@@ -27,7 +26,7 @@ import Register from './pages/Register';
 import AccountSettings from './pages/AccountSettings';
 import { PrivateRoute } from './components/PrivateRoute';
 import { RoleRoute } from './components/RoleRoute';
-import { DevDebugWidget } from './components/DevDebugWidget';
+
 import { RequireAdmin } from './components/RequireAdmin';
 import AdminCmsLogin from './pages/AdminCmsLogin';
 import AdminHelpCenter from './pages/AdminHelpCenter';
@@ -46,122 +45,20 @@ import AdminSectionEditorFlat from './admin/pages/AdminSectionEditorFlat';
 import AdminBlogList from './admin/pages/AdminBlogList';
 import AdminBlogEditor from './admin/pages/AdminBlogEditor';
 import AdminTutorials from './admin/pages/AdminTutorials';
+import AdminCategoryManagement from './admin/pages/AdminCategoryManagement';
 import HelpCenterSection from './pages/HelpCenterSection';
 import TutorialsPage from './pages/TutorialsPage';
-
-/* ── Temporary debug banner — DELETE THIS COMPONENT after confirming Supabase works ── */
-function SupabaseDebugBanner() {
-  const [info, setInfo] = useState<{ status: string; detail: string; ok: boolean } | null>(null);
-  const [dismissed, setDismissed] = useState(false);
-
-  useEffect(() => {
-    const t0 = performance.now();
-    const urlSet = !!import.meta.env.VITE_SUPABASE_URL;
-    const keySet = !!import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-    if (!urlSet || !keySet) {
-      setInfo({ status: `ENV MISSING — URL: ${urlSet}, KEY: ${keySet}`, detail: 'Check .env file', ok: false });
-      return;
-    }
-
-    (async () => {
-      try {
-        const { data, error } = await supabase
-          .from('hc_categories')
-          .select('id')
-          .limit(1);
-        const ms = (performance.now() - t0).toFixed(0);
-        if (error) {
-          setInfo({ status: `QUERY FAILED (${ms}ms)`, detail: `${error.message} [code: ${error.code}]`, ok: false });
-        } else {
-          setInfo({ status: `OK (${ms}ms)`, detail: `hc_categories returned ${data?.length ?? 0} row(s)`, ok: true });
-        }
-      } catch (err: any) {
-        const ms = (performance.now() - t0).toFixed(0);
-        setInfo({ status: `NETWORK ERROR (${ms}ms)`, detail: err?.message || 'Unknown error', ok: false });
-      }
-    })();
-  }, []);
-
-  if (dismissed || !info) return null;
-
-  return (
-    <div
-      onClick={() => setDismissed(true)}
-      style={{
-        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 99999,
-        padding: '8px 16px', fontSize: 12, fontFamily: 'monospace', cursor: 'pointer',
-        background: info.ok ? '#065f46' : '#991b1b', color: '#fff',
-      }}
-    >
-      <strong>Supabase:</strong> {info.status} — {info.detail}
-      <span style={{ float: 'right', opacity: 0.7 }}>(click to dismiss)</span>
-    </div>
-  );
-}
-
-/* ── DEV-only route/loading debug overlay — top-right corner ── */
-function DevRouteOverlay() {
-  const location = useLocation();
-  const [lastFetch, setLastFetch] = useState<string>('—');
-  const [lastError, setLastError] = useState<string>('—');
-  const [elapsed, setElapsed] = useState(0);
-
-  // Track time since last navigation (detects stuck loading)
-  useEffect(() => {
-    setElapsed(0);
-    setLastFetch('—');
-    setLastError('—');
-    const iv = setInterval(() => setElapsed(prev => prev + 1), 1000);
-    return () => clearInterval(iv);
-  }, [location.pathname]);
-
-  useEffect(() => {
-    // Listen for custom debug events from pages
-    const onFetch = () => setLastFetch(new Date().toLocaleTimeString());
-    const onError = (e: Event) => setLastError((e as CustomEvent).detail || 'unknown');
-    window.addEventListener('hc-debug-fetch', onFetch);
-    window.addEventListener('hc-debug-error', onError);
-    return () => {
-      window.removeEventListener('hc-debug-fetch', onFetch);
-      window.removeEventListener('hc-debug-error', onError);
-    };
-  }, []);
-
-  if (!import.meta.env.DEV) return null;
-
-  const stuck = elapsed > 5 && lastFetch === '—';
-
-  return (
-    <div
-      style={{
-        position: 'fixed', top: 8, right: 8, zIndex: 99998,
-        background: stuck ? 'rgba(153,27,27,0.9)' : 'rgba(0,0,0,0.8)',
-        color: stuck ? '#fecaca' : '#a5f3fc', fontSize: 11,
-        fontFamily: 'monospace', padding: '6px 10px', borderRadius: 6,
-        lineHeight: 1.6, maxWidth: 320, pointerEvents: 'none',
-      }}
-    >
-      <div><strong>Route:</strong> {location.pathname}</div>
-      <div><strong>Elapsed:</strong> {elapsed}s {stuck ? '⚠ STUCK?' : ''}</div>
-      <div><strong>Last fetch:</strong> {lastFetch}</div>
-      <div><strong>Last error:</strong> {lastError}</div>
-    </div>
-  );
-}
+import ResourcesLanding from './pages/ResourcesLanding';
+import ResourcesListing from './pages/ResourcesListing';
 
 function App() {
   return (
     <I18nProvider>
       <AuthProvider>
       <HashRouter>
-        {/* ── Temporary: remove after confirming Supabase connectivity ── */}
-        <SupabaseDebugBanner />
-        {/* ── DEV-only route diagnostics overlay ── */}
-        <DevRouteOverlay />
         <Routes>
-          {/* Redirect root to help home */}
-          <Route path="/" element={<Navigate to="/help" replace />} />
+          {/* Root → Resources landing page */}
+          <Route path="/" element={<ResourcesLanding />} />
 
           <Route path="/help" element={<Home />} />
           <Route path="/help/search" element={<SearchPage />} />
@@ -179,6 +76,10 @@ function App() {
           <Route path="/help/resources/teachers/all" element={<TeacherResourcesAllPage />} />
           <Route path="/help/resources/students" element={<StudentResourcesPage />} />
           <Route path="/help/resources/students/all" element={<StudentResourcesAllPage />} />
+
+          {/* ═══ Standalone Resources (DB-driven collections) ═══ */}
+          <Route path="/resources" element={<ResourcesLanding />} />
+          <Route path="/resources/:audience" element={<ResourcesListing />} />
 
           {/* Blog (public: read-only) */}
           <Route path="/blog" element={<BlogFeed />} />
@@ -239,6 +140,9 @@ function App() {
           <Route path="/admin/help-center/articles/new" element={<RequireAdmin><AdminArticleEditorFlat /></RequireAdmin>} />
           <Route path="/admin/help-center/articles/edit/:id" element={<RequireAdmin><AdminArticleEditorFlat /></RequireAdmin>} />
 
+          {/* Admin: Help Center — category management (sections + articles) */}
+          <Route path="/admin/help-center/category/:categoryId/manage" element={<RequireAdmin><AdminCategoryManagement /></RequireAdmin>} />
+
           {/* Admin: Help Center — legacy nested routes (backward compat) */}
           <Route path="/admin/help-center/category/:categoryId" element={<RequireAdmin><AdminCategoryEditor /></RequireAdmin>} />
           <Route path="/admin/help-center/category/:categoryId/edit" element={<RequireAdmin><AdminCategoryEditor /></RequireAdmin>} />
@@ -249,13 +153,10 @@ function App() {
           {/* Unauthorized */}
           <Route path="/unauthorized" element={<Unauthorized />} />
 
-          {/* Fallback */}
-          <Route path="/404" element={<NotFound />} />
-          <Route path="*" element={<Navigate to="/404" replace />} />
+          {/* Fallback — render NotFound directly (no redirect to /404) */}
+          <Route path="*" element={<NotFound />} />
         </Routes>
 
-        {/* DEV-only debug widget — only renders when import.meta.env.DEV is true */}
-        <DevDebugWidget />
       </HashRouter>
       </AuthProvider>
     </I18nProvider>
