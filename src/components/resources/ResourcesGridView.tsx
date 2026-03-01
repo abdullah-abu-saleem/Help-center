@@ -2,44 +2,39 @@ import React, { useState, useMemo } from 'react';
 import { Layout } from '../Layout';
 import { Link } from 'react-router-dom';
 import { useI18n } from '../../lib/i18n';
-import type { ResourceVideo, RawVideo } from '../../data/resourceVideos';
+import type { ResourceVideo } from '../../data/resourceVideos';
 import { TutorialCard } from './TutorialCard';
 import { VideoPlayerModal } from './VideoPlayerModal';
 
 /* ═══════════════════════════════════════════════════
    ResourcesGridView — "See all" grid with search
    Used by TeacherResourcesAllPage & StudentResourcesAllPage.
-   Now uses static data (no Supabase fetching).
+   Accepts pre-resolved videos (title/description already localized).
    ═══════════════════════════════════════════════════ */
 
 interface ResourcesGridViewProps {
-  rawVideos: RawVideo[];
+  videos: ResourceVideo[];
   accentColor: string;
   backTo: string;
   backLabel: string;
   title: React.ReactNode;
+  /** Map of video id → custom poster image URL */
+  customThumbnails?: Record<string, string>;
+  loading?: boolean;
 }
 
 export const ResourcesGridView: React.FC<ResourcesGridViewProps> = ({
-  rawVideos,
+  videos,
   accentColor,
   backTo,
   backLabel,
   title,
+  customThumbnails,
+  loading,
 }) => {
-  const { t, lang } = useI18n();
+  const { lang } = useI18n();
   const [search, setSearch] = useState('');
   const [playerVideo, setPlayerVideo] = useState<ResourceVideo | null>(null);
-
-  const videos: ResourceVideo[] = useMemo(
-    () => rawVideos.map((v) => ({
-      id: v.id,
-      url: v.url,
-      title: t(v.titleKey),
-      description: t(v.descKey),
-    })),
-    [rawVideos, t],
-  );
 
   const filtered = useMemo(() => {
     if (!search.trim()) return videos;
@@ -113,7 +108,11 @@ export const ResourcesGridView: React.FC<ResourcesGridViewProps> = ({
 
         {/* Grid area */}
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px 80px' }}>
-          {filtered.length === 0 ? (
+          {loading ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
+              <div className="w-8 h-8 border-2 border-slate-200 border-t-[#6366f1] rounded-full animate-spin" />
+            </div>
+          ) : filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 0', color: '#94a3b8' }}>
               <svg style={{ width: 48, height: 48, margin: '0 auto 16px', opacity: 0.5 }} fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z" />
@@ -134,6 +133,7 @@ export const ResourcesGridView: React.FC<ResourcesGridViewProps> = ({
                   video={video}
                   displayIndex={i + 1}
                   onPlay={() => setPlayerVideo(video)}
+                  {...(customThumbnails?.[video.id] ? { customThumbnail: customThumbnails[video.id] } : {})}
                 />
               ))}
             </div>

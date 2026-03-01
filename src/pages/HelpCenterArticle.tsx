@@ -18,8 +18,10 @@ export default function HelpCenterArticle() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  useEffect(() => { console.log('[HC_ARTICLE] mounted, slug:', articleSlug); }, []);
+
   const fetchData = useCallback(() => {
-    if (!articleSlug) return;
+    if (!articleSlug) { setLoading(false); return; }
     setLoading(true);
     getHcArticleBySlug(articleSlug)
       .then((art) => {

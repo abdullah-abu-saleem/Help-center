@@ -10,6 +10,8 @@ import {
   isSessionError,
   type HcCategory,
 } from '../../lib/helpCenterApi';
+import { CategoryCard } from '../../components/categories/CategoryCard';
+import { CategoryGrid } from '../../components/categories/CategoryGrid';
 
 export default function AdminHelpCenterHub() {
   const navigate = useNavigate();
@@ -282,85 +284,24 @@ export default function AdminHelpCenterHub() {
             )}
           </div>
         ) : (
-          <div className="space-y-3">
-            {filtered.map((cat) => (
-              <div
+          <CategoryGrid>
+            {filtered.map((cat, idx) => (
+              <CategoryCard
                 key={cat.id}
-                className="glass-card rounded-2xl p-5 flex items-center justify-between hover:shadow-lg transition-all relative overflow-hidden"
-              >
-                <div className="admin-card-accent" style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }} />
-                <div className="flex items-center gap-4 flex-1 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-500 flex-shrink-0">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" />
-                    </svg>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-semibold text-slate-900 truncate">{cat.title}</h3>
-                      {!cat.is_published && (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-100">
-                          Inactive
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      /{cat.slug} &middot; Order: {cat.sort_order}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <a
-                    href={`/#/help/category/${cat.slug}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-2 py-1.5 text-xs text-slate-400 hover:text-slate-600 transition-colors"
-                    title="View on public site"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
-                    </svg>
-                  </a>
-                  <Link
-                    to={`/admin/help-center/sections?category=${cat.id}`}
-                    className="px-3 py-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
-                  >
-                    Sections
-                  </Link>
-                  <Link
-                    to={`/admin/help-center/category/${cat.id}/edit`}
-                    className="px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
-                  >
-                    Edit
-                  </Link>
-                  {deleteConfirm === cat.id ? (
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => handleDelete(cat.id)}
-                        className="px-3 py-1.5 text-xs font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors"
-                      >
-                        Confirm
-                      </button>
-                      <button
-                        onClick={() => setDeleteConfirm(null)}
-                        className="px-3 py-1.5 text-xs font-medium text-slate-500 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setDeleteConfirm(cat.id)}
-                      className="px-3 py-1.5 text-xs font-medium text-red-500 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
-                    >
-                      Delete
-                    </button>
-                  )}
-                </div>
-              </div>
+                category={cat}
+                index={idx}
+                adminActions={{
+                  viewHref: `/#/help/category/${cat.slug}`,
+                  sectionsTo: `/admin/help-center/sections?category=${cat.id}`,
+                  editTo: `/admin/help-center/category/${cat.id}/edit`,
+                  onDelete: () => setDeleteConfirm(cat.id),
+                  deleteConfirm: deleteConfirm === cat.id,
+                  onDeleteConfirm: () => handleDelete(cat.id),
+                  onDeleteCancel: () => setDeleteConfirm(null),
+                }}
+              />
             ))}
-          </div>
+          </CategoryGrid>
         )}
       </main>
     </div>

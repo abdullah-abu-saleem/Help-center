@@ -1,17 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, Navigate, NavLink, useNavigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { ArticleGroup } from '../components/ArticleGroup';
 import { useI18n } from '../lib/i18n';
-import { FEATURE_CATEGORIES, ROLE_CATEGORY_MAP } from '../data';
+import { FEATURE_CATEGORIES } from '../data';
 import {
-  getCategoryById,
-  getSectionById,
-  getGroupsBySectionId,
-  getArticlesByGroupId,
-  getArticlesBySectionId,
-} from '../lib/api';
+  getHcCategoryBySlug,
+  getHcSectionBySlugs,
+  getHcGroupsBySection,
+  getHcArticlesByGroup,
+  getHcArticlesBySection,
+  type HcCategory,
+  type HcSection,
+  type HcGroup,
+  type HcArticle,
+} from '../lib/helpCenterApi';
 import { scrollToHash } from '../lib/utils';
+
+/* Map role param → category slug used for display (breadcrumbs) */
+const ROLE_DISPLAY_CATEGORY_SLUG: Record<string, string> = {
+  teacher: 'for-teachers',
+  student: 'for-students',
+};
+
+/* Map role param → category slug where the sections actually live */
+const ROLE_CONTENT_CATEGORY_SLUG: Record<string, string> = {
+  teacher: 'for-schools-and-districts',
+  student: 'for-students',
+};
 
 export default function RoleFeaturePage() {
   const { t, localize } = useI18n();
@@ -19,34 +35,125 @@ export default function RoleFeaturePage() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
 
+  useEffect(() => { console.log('[HC_ROLE_FEATURE] mounted, role:', role, 'feature:', featureSlug); }, []);
+
+  // Static UI config — kept as navigation metadata
   const feature = FEATURE_CATEGORIES.find(
     fc => fc.slug === featureSlug && fc.roles.includes(role as 'teacher' | 'student')
   );
 
-  const categoryId = role ? ROLE_CATEGORY_MAP[role] : undefined;
-  const category = categoryId ? getCategoryById(categoryId) : undefined;
-
-  if (!feature || !category) {
-    return <Navigate to="/404" replace />;
-  }
-
-  const resolvedSectionId = (role && feature.sectionIdByRole?.[role as 'teacher' | 'student'])
-    || feature.sectionId;
-  const section = getSectionById(resolvedSectionId);
-
-  if (!section) {
-    return <Navigate to="/404" replace />;
-  }
-
-  // Data loading — pass role for article filtering
-  const groups = getGroupsBySectionId(section.id);
-  const hasGroups = groups.length > 0;
-  const ungroupedArticles = !hasGroups ? getArticlesBySectionId(section.id, role) : [];
-
-  // Sidebar: all feature categories for this role
   const siblingFeatures = FEATURE_CATEGORIES.filter(
     fc => fc.roles.includes(role as 'teacher' | 'student')
   );
+
+  // Supabase state
+  const [category, setCategory] = useState<HcCategory | null>(null);
+  const [section, setSection] = useState<(HcSection & { categoryId: string; order: number }) | null>(null);
+  const [groups, setGroups] = useState<any[]>([]);
+  const [groupArticlesMap, setGroupArticlesMap] = useState<Map<string, any[]>>(new Map());
+  const [ungroupedArticles, setUngroupedArticles] = useState<any[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoaded(false);
+    if (!role || !featureSlug || !feature) {
+      setLoaded(true);
+      return;
+    }
+    (async () => {
+      try {
+        const displayCatSlug = ROLE_DISPLAY_CATEGORY_SLUG[role];
+        const contentCatSlug = ROLE_CONTENT_CATEGORY_SLUG[role];
+        if (!displayCatSlug || !contentCatSlug) { setLoaded(true); return; }
+
+        // Fetch display category (for breadcrumbs) and content section in parallel
+        const [cat, sec] = await Promise.all([
+          getHcCategoryBySlug(displayCatSlug),
+          getHcSectionBySlugs(contentCatSlug, featureSlug),
+        ]);
+        if (cancelled) return;
+
+        if (cat) setCategory(cat);
+        if (sec) {
+          setSection({ ...sec, categoryId: sec.category_id, order: sec.sort_order });
+
+          // Load groups + section articles
+          const [grps, secArts] = await Promise.all([
+            getHcGroupsBySection(sec.id),
+            getHcArticlesBySection(sec.id),
+          ]);
+          if (cancelled) return;
+
+          const mappedGroups = grps.map(g => ({
+            id: g.id, sectionId: g.section_id,
+            title: g.title, title_ar: g.title_ar,
+            description: g.description, description_ar: g.description_ar,
+            order: g.sort_order,
+          }));
+          setGroups(mappedGroups);
+
+          if (grps.length > 0) {
+            const gMap = new Map<string, any[]>();
+            for (const g of grps) {
+              const arts = await getHcArticlesByGroup(g.id);
+              if (cancelled) return;
+              gMap.set(g.id, arts.map(a => ({
+                ...a, sectionId: a.section_id, groupId: (a as any).group_id,
+                bodyMarkdown: a.body_markdown, bodyMarkdown_ar: a.body_markdown_ar,
+                updatedAt: a.updated_at, tags: a.tags || [],
+              })));
+            }
+            setGroupArticlesMap(gMap);
+          } else {
+            setUngroupedArticles(secArts.map(a => ({
+              ...a, sectionId: a.section_id, groupId: (a as any).group_id,
+              bodyMarkdown: a.body_markdown, bodyMarkdown_ar: a.body_markdown_ar,
+              updatedAt: a.updated_at, tags: a.tags || [],
+            })));
+          }
+        }
+      } catch (err: any) {
+        console.error('[RoleFeaturePage] Supabase error:', err);
+        if (!cancelled) setError(err?.message || 'Failed to load page');
+      } finally {
+        if (!cancelled) setLoaded(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [role, featureSlug]);
+
+  if (!feature) {
+    return <Navigate to="/404" replace />;
+  }
+
+  if (!loaded) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center py-20">
+          <div className="w-8 h-8 border-2 border-slate-200 border-t-[#6366f1] rounded-full animate-spin" />
+        </div>
+      </Layout>
+    );
+  }
+
+  if (error) {
+    return (
+      <Layout>
+        <div className="flex flex-col items-center justify-center py-20 text-center px-6">
+          <p className="text-red-500 text-sm font-semibold mb-1">Failed to load page</p>
+          <p className="text-slate-400 text-xs">{error}</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!category || !section) {
+    return <Navigate to="/404" replace />;
+  }
+
+  const hasGroups = groups.length > 0;
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -177,7 +284,7 @@ export default function RoleFeaturePage() {
               {hasGroups ? (
                 <div className="w-full divide-y divide-slate-200/70">
                   {groups.map((group) => {
-                    const groupArticles = getArticlesByGroupId(group.id, role);
+                    const groupArticles = groupArticlesMap.get(group.id) || [];
                     return (
                       <div key={group.id} className="py-8 first:pt-0">
                         <ArticleGroup

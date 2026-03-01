@@ -1,56 +1,71 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Layout } from '../components/Layout';
 import { ResourceSection } from '../components/ResourceSection';
 import { teacherSectionsMeta, studentSectionsMeta } from '../resourcesData';
 import type { Resource } from '../resourcesData';
-import { TEACHER_VIDEOS, STUDENT_VIDEOS } from '../data/resourceVideos';
 import { useI18n } from '../lib/i18n';
 import { extractYouTubeId, youTubeThumbnail } from '../lib/tutorialsApi';
+import { getHcResourceVideos, type HcResourceVideo } from '../lib/helpCenterApi';
 
 const PINK = '#EC4899';
 const BLUE = '#08B8FB';
 
 export default function ResourcesPage() {
-  const { t } = useI18n();
+  const { localize } = useI18n();
 
-  /* ── Convert static RawVideo[] → Resource[] with i18n + YouTube thumbs ── */
-  const teacherResources = useMemo<Resource[]>(() =>
-    TEACHER_VIDEOS.map((v) => {
-      const videoId = extractYouTubeId(v.url);
+  const [rawTeacher, setRawTeacher] = useState<HcResourceVideo[]>([]);
+  const [rawStudent, setRawStudent] = useState<HcResourceVideo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => { console.log('[HC_RESOURCES] mounted'); }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    console.log('[ResourcesPage] Fetching hc_resource_videos (teacher + student)…');
+    (async () => {
+      try {
+        const [teacherRows, studentRows] = await Promise.all([
+          getHcResourceVideos('teacher'),
+          getHcResourceVideos('student'),
+        ]);
+        if (cancelled) return;
+        console.log('[ResourcesPage] Loaded', teacherRows.length, 'teacher +', studentRows.length, 'student videos');
+        setRawTeacher(teacherRows);
+        setRawStudent(studentRows);
+      } catch (err: any) {
+        console.error('[ResourcesPage] Supabase error:', err);
+        if (!cancelled) setError(err?.message || 'Failed to load resources');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const mapToResources = (rows: HcResourceVideo[], section: string, audience: 'teacher' | 'student'): Resource[] =>
+    rows.map((v) => {
+      const videoId = extractYouTubeId(v.youtube_url);
       return {
         id: v.id,
-        section: 'teacher-videos',
-        audience: 'teacher' as const,
-        title: t(v.titleKey),
-        description: t(v.descKey),
+        section,
+        audience,
+        title: localize(v, 'title'),
+        description: localize(v, 'description'),
         type: 'watch' as const,
-        thumbnail: videoId ? youTubeThumbnail(videoId) : '',
-        link: v.url,
+        thumbnail: v.thumbnail_url || (videoId ? youTubeThumbnail(videoId) : ''),
+        link: v.youtube_url,
       };
-    }),
-  [t]);
+    });
 
-  const studentResources = useMemo<Resource[]>(() =>
-    STUDENT_VIDEOS.map((v) => {
-      const videoId = extractYouTubeId(v.url);
-      return {
-        id: v.id,
-        section: 'student-videos',
-        audience: 'student' as const,
-        title: t(v.titleKey),
-        description: t(v.descKey),
-        type: 'watch' as const,
-        thumbnail: videoId ? youTubeThumbnail(videoId) : '',
-        link: v.url,
-      };
-    }),
-  [t]);
+  const teacherResources = useMemo(() => mapToResources(rawTeacher, 'teacher-videos', 'teacher'), [rawTeacher, localize]);
+  const studentResources = useMemo(() => mapToResources(rawStudent, 'student-videos', 'student'), [rawStudent, localize]);
 
   const groupedResources = useMemo(() => {
-    const map = new Map<string, Resource[]>();
-    map.set('teacher-videos', teacherResources);
-    map.set('student-videos', studentResources);
-    return map;
+    const m = new Map<string, Resource[]>();
+    m.set('teacher-videos', teacherResources);
+    m.set('student-videos', studentResources);
+    return m;
   }, [teacherResources, studentResources]);
 
   const scrollTo = useCallback((id: string) => {
@@ -313,59 +328,72 @@ export default function ResourcesPage() {
             </button>
           </div>
 
-          {/* ── Teacher Resources ── */}
-          <div id="section-teacher" style={{ scrollMarginTop: 90, marginBottom: 64 }}>
-            <div style={{ marginBottom: 32, paddingBottom: 16, borderBottom: `3px solid ${PINK}` }}>
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: 8,
-                padding: '5px 14px', borderRadius: 9999, marginBottom: 12,
-                background: `${PINK}12`, border: `1px solid ${PINK}25`,
-              }}>
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: PINK, display: 'inline-block' }} />
-                <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' as const, color: PINK }}>
-                  For Teachers
-                </span>
-              </div>
-              <h2 style={{ fontSize: 'clamp(1.5rem, 3vw, 2rem)', fontWeight: 800, color: '#0f172a', lineHeight: 1.2 }}>
-                <span className="gradient-text">Teacher</span> Resources
-              </h2>
+          {loading ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
+              <div className="w-8 h-8 border-2 border-slate-200 border-t-[#6366f1] rounded-full animate-spin" />
             </div>
-
-            {teacherSectionsMeta.map((meta) => (
-              <ResourceSection
-                key={meta.key}
-                meta={meta}
-                resources={groupedResources.get(meta.key) || []}
-              />
-            ))}
-          </div>
-
-          {/* ── Student Resources ── */}
-          <div id="section-student" style={{ scrollMarginTop: 90 }}>
-            <div style={{ marginBottom: 32, paddingBottom: 16, borderBottom: `3px solid ${BLUE}` }}>
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: 8,
-                padding: '5px 14px', borderRadius: 9999, marginBottom: 12,
-                background: `${BLUE}12`, border: `1px solid ${BLUE}25`,
-              }}>
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: BLUE, display: 'inline-block' }} />
-                <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' as const, color: BLUE }}>
-                  For Students
-                </span>
-              </div>
-              <h2 style={{ fontSize: 'clamp(1.5rem, 3vw, 2rem)', fontWeight: 800, color: '#0f172a', lineHeight: 1.2 }}>
-                <span className="gradient-text">Student</span> Resources
-              </h2>
+          ) : error ? (
+            <div style={{ textAlign: 'center', padding: '60px 24px', color: '#ef4444' }}>
+              <p style={{ fontSize: 15, fontWeight: 600 }}>Failed to load resources</p>
+              <p style={{ fontSize: 13, color: '#94a3b8', marginTop: 4 }}>{error}</p>
             </div>
+          ) : (
+            <>
+              {/* ── Teacher Resources ── */}
+              <div id="section-teacher" style={{ scrollMarginTop: 90, marginBottom: 64 }}>
+                <div style={{ marginBottom: 32, paddingBottom: 16, borderBottom: `3px solid ${PINK}` }}>
+                  <div style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 8,
+                    padding: '5px 14px', borderRadius: 9999, marginBottom: 12,
+                    background: `${PINK}12`, border: `1px solid ${PINK}25`,
+                  }}>
+                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: PINK, display: 'inline-block' }} />
+                    <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' as const, color: PINK }}>
+                      For Teachers
+                    </span>
+                  </div>
+                  <h2 style={{ fontSize: 'clamp(1.5rem, 3vw, 2rem)', fontWeight: 800, color: '#0f172a', lineHeight: 1.2 }}>
+                    <span className="gradient-text">Teacher</span> Resources
+                  </h2>
+                </div>
 
-            {studentSectionsMeta.map((meta) => (
-              <ResourceSection
-                key={meta.key}
-                meta={meta}
-                resources={groupedResources.get(meta.key) || []}
-              />
-            ))}
-          </div>
+                {teacherSectionsMeta.map((meta) => (
+                  <ResourceSection
+                    key={meta.key}
+                    meta={meta}
+                    resources={groupedResources.get(meta.key) || []}
+                  />
+                ))}
+              </div>
+
+              {/* ── Student Resources ── */}
+              <div id="section-student" style={{ scrollMarginTop: 90 }}>
+                <div style={{ marginBottom: 32, paddingBottom: 16, borderBottom: `3px solid ${BLUE}` }}>
+                  <div style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 8,
+                    padding: '5px 14px', borderRadius: 9999, marginBottom: 12,
+                    background: `${BLUE}12`, border: `1px solid ${BLUE}25`,
+                  }}>
+                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: BLUE, display: 'inline-block' }} />
+                    <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' as const, color: BLUE }}>
+                      For Students
+                    </span>
+                  </div>
+                  <h2 style={{ fontSize: 'clamp(1.5rem, 3vw, 2rem)', fontWeight: 800, color: '#0f172a', lineHeight: 1.2 }}>
+                    <span className="gradient-text">Student</span> Resources
+                  </h2>
+                </div>
+
+                {studentSectionsMeta.map((meta) => (
+                  <ResourceSection
+                    key={meta.key}
+                    meta={meta}
+                    resources={groupedResources.get(meta.key) || []}
+                  />
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
       </div>

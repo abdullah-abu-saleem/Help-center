@@ -7,7 +7,7 @@
  * Admin writes require an authenticated admin user session (RLS enforced).
  */
 
-import { supabase, safeGetSession } from './supabase';
+import { supabase, supabasePublic, safeGetSession } from './supabase';
 import { emitDataChange } from './dataEvents';
 
 /**
@@ -17,6 +17,30 @@ import { emitDataChange } from './dataEvents';
 export function isSessionError(err: unknown): boolean {
   const msg = ((err as any)?.message || '').toLowerCase();
   return msg.includes('session') || msg.includes('sign in') || msg.includes('jwt');
+}
+
+/**
+ * Race a promise against a timeout — rejects with a labelled error if the
+ * operation hangs (prevents "Loading…" spinners that never resolve).
+ */
+function raceTimeout<T>(
+  p: Promise<T> | PromiseLike<T>,
+  ms: number,
+  label: string,
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    let done = false;
+    const t = setTimeout(() => {
+      if (!done) {
+        done = true;
+        reject(new Error(`${label}: timed out after ${ms}ms`));
+      }
+    }, ms);
+    Promise.resolve(p).then(
+      (v) => { if (!done) { done = true; clearTimeout(t); resolve(v); } },
+      (e) => { if (!done) { done = true; clearTimeout(t); reject(e); } },
+    );
+  });
 }
 
 // ─── Types ────────────────────────────────────────────────────
@@ -79,6 +103,22 @@ export interface HcGroup {
   updated_at: string;
 }
 
+export interface HcResourceVideo {
+  id: string;
+  audience: 'teacher' | 'student';
+  title: string;
+  title_ar: string | null;
+  description: string;
+  description_ar: string | null;
+  youtube_url: string;
+  thumbnail_url: string | null;
+  playlist_title: string | null;
+  sort_order: number;
+  is_published: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 // Joined types for queries that need parent info
 
 export interface HcSectionWithCategory extends HcSection {
@@ -95,39 +135,45 @@ export interface HcArticleWithSection extends HcArticle {
 
 /** Fetch all active categories (public). */
 export async function getHcCategories(): Promise<HcCategory[]> {
-  const { data, error } = await supabase
+  console.log('[helpCenterApi] getHcCategories…');
+  const { data, error } = await supabasePublic
     .from('hc_categories')
     .select('*')
     .eq('is_published', true)
     .order('sort_order', { ascending: true });
 
-  if (error) throw error;
+  if (error) { console.error('[helpCenterApi] getHcCategories error:', error); throw error; }
+  console.log('[helpCenterApi] getHcCategories returned', data?.length, 'rows');
   return data || [];
 }
 
 /** Fetch a single category by slug (public, must be active). */
 export async function getHcCategoryBySlug(slug: string): Promise<HcCategory | null> {
-  const { data, error } = await supabase
+  console.log('[helpCenterApi] getHcCategoryBySlug:', slug);
+  const { data, error } = await supabasePublic
     .from('hc_categories')
     .select('*')
     .eq('slug', slug)
     .eq('is_published', true)
     .single();
 
-  if (error && error.code !== 'PGRST116') throw error;
+  if (error && error.code !== 'PGRST116') { console.error('[helpCenterApi] getHcCategoryBySlug error:', error); throw error; }
+  console.log('[helpCenterApi] getHcCategoryBySlug result:', data ? data.slug : 'null');
   return data || null;
 }
 
 /** Fetch active sections for a given category (public). */
 export async function getHcSectionsByCategory(categoryId: string): Promise<HcSection[]> {
-  const { data, error } = await supabase
+  console.log('[helpCenterApi] getHcSectionsByCategory:', categoryId);
+  const { data, error } = await supabasePublic
     .from('hc_sections')
     .select('*')
     .eq('category_id', categoryId)
     .eq('is_published', true)
     .order('sort_order', { ascending: true });
 
-  if (error) throw error;
+  if (error) { console.error('[helpCenterApi] getHcSectionsByCategory error:', error); throw error; }
+  console.log('[helpCenterApi] getHcSectionsByCategory returned', data?.length, 'rows');
   return data || [];
 }
 
@@ -136,7 +182,7 @@ export async function getHcSectionBySlug(
   categoryId: string,
   sectionSlug: string,
 ): Promise<HcSectionWithCategory | null> {
-  const { data, error } = await supabase
+  const { data, error } = await supabasePublic
     .from('hc_sections')
     .select('*, hc_categories(slug, title, title_ar)')
     .eq('category_id', categoryId)
@@ -150,7 +196,7 @@ export async function getHcSectionBySlug(
 
 /** Fetch published articles for a given section (public). */
 export async function getHcArticlesBySection(sectionId: string): Promise<HcArticle[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabasePublic
     .from('hc_articles')
     .select('*')
     .eq('section_id', sectionId)
@@ -163,7 +209,7 @@ export async function getHcArticlesBySection(sectionId: string): Promise<HcArtic
 
 /** Fetch a single published article by slug with full lineage (public). */
 export async function getHcArticleBySlug(slug: string): Promise<HcArticleWithSection | null> {
-  const { data, error } = await supabase
+  const { data, error } = await supabasePublic
     .from('hc_articles')
     .select('*, hc_sections(slug, title, title_ar, hc_categories(slug, title, title_ar))')
     .eq('slug', slug)
@@ -176,7 +222,7 @@ export async function getHcArticleBySlug(slug: string): Promise<HcArticleWithSec
 
 /** Fetch groups for a given section (public). */
 export async function getHcGroupsBySection(sectionId: string): Promise<HcGroup[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabasePublic
     .from('hc_groups')
     .select('*')
     .eq('section_id', sectionId)
@@ -188,7 +234,7 @@ export async function getHcGroupsBySection(sectionId: string): Promise<HcGroup[]
 
 /** Fetch published articles for a given group (public). */
 export async function getHcArticlesByGroup(groupId: string): Promise<HcArticle[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabasePublic
     .from('hc_articles')
     .select('*')
     .eq('group_id', groupId)
@@ -205,7 +251,7 @@ export async function getHcArticleBySlugFull(slug: string): Promise<(HcArticle &
     hc_categories: Pick<HcCategory, 'id' | 'slug' | 'title' | 'title_ar'> | null;
   }) | null;
 }) | null> {
-  const { data, error } = await supabase
+  const { data, error } = await supabasePublic
     .from('hc_articles')
     .select('*, hc_sections(id, slug, title, title_ar, category_id, hc_categories(id, slug, title, title_ar))')
     .eq('slug', slug)
@@ -218,18 +264,19 @@ export async function getHcArticleBySlugFull(slug: string): Promise<(HcArticle &
 
 /** Fetch featured articles for a category (public). */
 export async function getHcFeaturedArticlesByCategory(categoryId: string): Promise<HcArticle[]> {
+  console.log('[helpCenterApi] getHcFeaturedArticlesByCategory:', categoryId);
   // Get all section IDs for this category first
-  const { data: sections, error: secErr } = await supabase
+  const { data: sections, error: secErr } = await supabasePublic
     .from('hc_sections')
     .select('id')
     .eq('category_id', categoryId)
     .eq('is_published', true);
 
-  if (secErr) throw secErr;
-  if (!sections || sections.length === 0) return [];
+  if (secErr) { console.error('[helpCenterApi] featured sections error:', secErr); throw secErr; }
+  if (!sections || sections.length === 0) { console.log('[helpCenterApi] no sections for featured — returning []'); return []; }
 
   const sectionIds = sections.map(s => s.id);
-  const { data, error } = await supabase
+  const { data, error } = await supabasePublic
     .from('hc_articles')
     .select('*')
     .in('section_id', sectionIds)
@@ -237,13 +284,14 @@ export async function getHcFeaturedArticlesByCategory(categoryId: string): Promi
     .eq('is_featured', true)
     .order('sort_order', { ascending: true });
 
-  if (error) throw error;
+  if (error) { console.error('[helpCenterApi] featured articles error:', error); throw error; }
+  console.log('[helpCenterApi] featured articles returned', data?.length, 'rows');
   return data || [];
 }
 
 /** Count published articles for a category (public). */
 export async function getHcArticleCountByCategory(categoryId: string): Promise<number> {
-  const { data: sections, error: secErr } = await supabase
+  const { data: sections, error: secErr } = await supabasePublic
     .from('hc_sections')
     .select('id')
     .eq('category_id', categoryId)
@@ -253,7 +301,7 @@ export async function getHcArticleCountByCategory(categoryId: string): Promise<n
   if (!sections || sections.length === 0) return 0;
 
   const sectionIds = sections.map(s => s.id);
-  const { count, error } = await supabase
+  const { count, error } = await supabasePublic
     .from('hc_articles')
     .select('*', { count: 'exact', head: true })
     .in('section_id', sectionIds)
@@ -265,7 +313,7 @@ export async function getHcArticleCountByCategory(categoryId: string): Promise<n
 
 /** Count published articles for a section (public). */
 export async function getHcArticleCountBySection(sectionId: string): Promise<number> {
-  const { count, error } = await supabase
+  const { count, error } = await supabasePublic
     .from('hc_articles')
     .select('*', { count: 'exact', head: true })
     .eq('section_id', sectionId)
@@ -275,13 +323,14 @@ export async function getHcArticleCountBySection(sectionId: string): Promise<num
   return count || 0;
 }
 
-/** Search published articles by query (public). */
+/** Search published articles by query (public).
+ *  Safe fallback: if body_markdown column is missing, retries with title+summary only. */
 export async function searchHcArticles(query: string): Promise<HcArticle[]> {
   if (!query.trim()) return [];
 
   // Use ilike for simple text search across title, summary, body, tags
   const q = `%${query.trim()}%`;
-  const { data, error } = await supabase
+  const { data, error } = await supabasePublic
     .from('hc_articles')
     .select('*')
     .eq('is_published', true)
@@ -289,8 +338,53 @@ export async function searchHcArticles(query: string): Promise<HcArticle[]> {
     .order('sort_order', { ascending: true })
     .limit(50);
 
-  if (error) throw error;
+  if (error) {
+    // 42703 = undefined_column — body_markdown missing; retry with title+summary only
+    if (error.code === '42703') {
+      console.warn('[helpCenterApi] search fallback — column missing, retrying without body_markdown');
+      const { data: fallback, error: fbErr } = await supabasePublic
+        .from('hc_articles')
+        .select('*')
+        .eq('is_published', true)
+        .or(`title.ilike.${q},summary.ilike.${q}`)
+        .order('sort_order', { ascending: true })
+        .limit(50);
+      if (fbErr) throw fbErr;
+      return fallback || [];
+    }
+    throw error;
+  }
   return data || [];
+}
+
+/** Fetch published resource videos by audience (public). */
+export async function getHcResourceVideos(audience: 'teacher' | 'student'): Promise<HcResourceVideo[]> {
+  console.log('[helpCenterApi] getHcResourceVideos:', audience);
+  const { data, error } = await supabasePublic
+    .from('hc_videos')
+    .select('*')
+    .eq('audience', audience)
+    .eq('is_published', true)
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: false });
+
+  if (error) { console.error('[helpCenterApi] getHcResourceVideos error:', error); throw error; }
+  console.log('[helpCenterApi] getHcResourceVideos returned', data?.length, 'rows');
+  return data || [];
+}
+
+/** Fetch ALL resource videos (admin, includes drafts). */
+export async function adminGetAllResourceVideos(): Promise<HcResourceVideo[]> {
+  return raceTimeout((async () => {
+    await requireSession();
+    const { data, error } = await supabase
+      .from('hc_videos')
+      .select('*')
+      .order('audience')
+      .order('sort_order', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  })(), 15_000, 'adminGetAllResourceVideos');
 }
 
 /** Fetch a section by slug within a category, resolving by category slug first (public). */
@@ -302,7 +396,7 @@ export async function getHcSectionBySlugs(
   const cat = await getHcCategoryBySlug(categorySlug);
   if (!cat) return null;
 
-  const { data, error } = await supabase
+  const { data, error } = await supabasePublic
     .from('hc_sections')
     .select('*, hc_categories(id, slug, title, title_ar)')
     .eq('category_id', cat.id)
@@ -318,163 +412,216 @@ export async function getHcSectionBySlugs(
 
 /** Fetch ALL categories for the admin panel (includes inactive). */
 export async function adminGetAllCategories(): Promise<HcCategory[]> {
-  await requireSession();
-  const { data, error } = await supabase
-    .from('hc_categories')
-    .select('*')
-    .order('sort_order', { ascending: true });
-
-  if (error) throw error;
-  return data || [];
+  return raceTimeout((async () => {
+    await requireSession();
+    const { data, error } = await supabase
+      .from('hc_categories')
+      .select('*')
+      .order('sort_order', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  })(), 15_000, 'adminGetAllCategories');
 }
 
 /** Fetch ALL sections with category info (admin). */
 export async function adminGetAllSections(): Promise<HcSectionWithCategory[]> {
-  await requireSession();
-  const { data, error } = await supabase
-    .from('hc_sections')
-    .select('*, hc_categories(slug, title, title_ar)')
-    .order('sort_order', { ascending: true });
-
-  if (error) throw error;
-  return (data || []) as HcSectionWithCategory[];
+  return raceTimeout((async () => {
+    await requireSession();
+    const { data, error } = await supabase
+      .from('hc_sections')
+      .select('*, hc_categories(slug, title, title_ar)')
+      .order('sort_order', { ascending: true });
+    if (error) throw error;
+    return (data || []) as HcSectionWithCategory[];
+  })(), 15_000, 'adminGetAllSections');
 }
 
 /** Fetch ALL sections for a category (admin, includes inactive). */
 export async function adminGetSectionsByCategory(categoryId: string): Promise<HcSection[]> {
-  await requireSession();
-  const { data, error } = await supabase
-    .from('hc_sections')
-    .select('*')
-    .eq('category_id', categoryId)
-    .order('sort_order', { ascending: true });
-
-  if (error) throw error;
-  return data || [];
+  return raceTimeout((async () => {
+    await requireSession();
+    const { data, error } = await supabase
+      .from('hc_sections')
+      .select('*')
+      .eq('category_id', categoryId)
+      .order('sort_order', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  })(), 15_000, 'adminGetSectionsByCategory');
 }
 
 /** Fetch a single section by ID (admin). */
 export async function adminGetSectionById(id: string): Promise<HcSectionWithCategory | null> {
-  await requireSession();
-  const { data, error } = await supabase
-    .from('hc_sections')
-    .select('*, hc_categories(slug, title, title_ar)')
-    .eq('id', id)
-    .single();
-
-  if (error && error.code !== 'PGRST116') throw error;
-  return (data as HcSectionWithCategory) || null;
+  return raceTimeout((async () => {
+    await requireSession();
+    const { data, error } = await supabase
+      .from('hc_sections')
+      .select('*, hc_categories(slug, title, title_ar)')
+      .eq('id', id)
+      .single();
+    if (error && error.code !== 'PGRST116') throw error;
+    return (data as HcSectionWithCategory) || null;
+  })(), 15_000, 'adminGetSectionById');
 }
 
 /** Fetch ALL articles across all sections (admin). */
 export async function adminGetAllArticles(): Promise<HcArticleWithSection[]> {
-  await requireSession();
-  const { data, error } = await supabase
-    .from('hc_articles')
-    .select('*, hc_sections(slug, title, title_ar, hc_categories(slug, title, title_ar))')
-    .order('sort_order', { ascending: true });
-
-  if (error) throw error;
-  return (data || []) as HcArticleWithSection[];
+  return raceTimeout((async () => {
+    await requireSession();
+    const { data, error } = await supabase
+      .from('hc_articles')
+      .select('*, hc_sections(slug, title, title_ar, hc_categories(slug, title, title_ar))')
+      .order('sort_order', { ascending: true });
+    if (error) throw error;
+    return (data || []) as HcArticleWithSection[];
+  })(), 15_000, 'adminGetAllArticles');
 }
 
 /** Fetch ALL articles for a section (admin, includes drafts). */
 export async function adminGetArticlesBySection(sectionId: string): Promise<HcArticle[]> {
-  await requireSession();
-  const { data, error } = await supabase
-    .from('hc_articles')
-    .select('*')
-    .eq('section_id', sectionId)
-    .order('sort_order', { ascending: true });
-
-  if (error) throw error;
-  return data || [];
+  return raceTimeout((async () => {
+    await requireSession();
+    const { data, error } = await supabase
+      .from('hc_articles')
+      .select('*')
+      .eq('section_id', sectionId)
+      .order('sort_order', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  })(), 15_000, 'adminGetArticlesBySection');
 }
 
 /** Fetch a single article by ID (admin, includes drafts). */
 export async function adminGetArticleById(id: string): Promise<HcArticleWithSection | null> {
-  await requireSession();
-  const { data, error } = await supabase
-    .from('hc_articles')
-    .select('*, hc_sections(slug, title, title_ar, hc_categories(slug, title, title_ar))')
-    .eq('id', id)
-    .single();
-
-  if (error && error.code !== 'PGRST116') throw error;
-  return (data as HcArticleWithSection) || null;
+  return raceTimeout((async () => {
+    await requireSession();
+    const { data, error } = await supabase
+      .from('hc_articles')
+      .select('*, hc_sections(slug, title, title_ar, hc_categories(slug, title, title_ar))')
+      .eq('id', id)
+      .single();
+    if (error && error.code !== 'PGRST116') throw error;
+    return (data as HcArticleWithSection) || null;
+  })(), 15_000, 'adminGetArticleById');
 }
 
 /** Fetch a single category by ID (admin). */
 export async function adminGetCategoryById(id: string): Promise<HcCategory | null> {
-  await requireSession();
-  const { data, error } = await supabase
-    .from('hc_categories')
-    .select('*')
-    .eq('id', id)
-    .single();
-
-  if (error && error.code !== 'PGRST116') throw error;
-  return data || null;
+  return raceTimeout((async () => {
+    await requireSession();
+    const { data, error } = await supabase
+      .from('hc_categories')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (error && error.code !== 'PGRST116') throw error;
+    return data || null;
+  })(), 15_000, 'adminGetCategoryById');
 }
 
 // ─── Admin Writes ─────────────────────────────────────────────
 
+/**
+ * Raw PATCH via PostgREST with explicit Prefer: return=minimal.
+ *
+ * The Supabase JS client's .update() does NOT set return=minimal,
+ * so PostgREST may default to RETURNING * — which triggers recursive
+ * RLS/trigger evaluation causing PostgreSQL "stack depth limit exceeded".
+ *
+ * This helper guarantees a plain UPDATE (no RETURNING clause).
+ */
+async function patchRow(
+  table: string,
+  id: string,
+  updates: Record<string, unknown>,
+  accessToken: string,
+): Promise<void> {
+  const baseUrl = (import.meta.env.VITE_SUPABASE_URL as string).replace(/\/+$/, '');
+  const apiKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+
+  if (import.meta.env.DEV) console.log(`[patchRow] PATCH ${table} id=${id}`);
+
+  const res = await fetch(
+    `${baseUrl}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': apiKey,
+        'Authorization': `Bearer ${accessToken}`,
+        'Prefer': 'return=minimal',
+      },
+      body: JSON.stringify(updates),
+    },
+  );
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    const msg = body?.message || body?.msg || body?.details || `Update failed (HTTP ${res.status})`;
+    if (import.meta.env.DEV) console.error(`[patchRow] FAILED ${table}:`, msg, body);
+    throw new Error(msg);
+  }
+
+  if (import.meta.env.DEV) console.log(`[patchRow] OK ${table} id=${id} (${res.status})`);
+}
+
+/**
+ * Get the current session or throw.  Wrapped in a 10 s timeout so the admin
+ * UI never hangs on "Loading…" if the auth client stalls.
+ */
 async function requireSession() {
+  // Label intentionally avoids the word "session" so isSessionError()
+  // does NOT treat a timeout as a session error (would redirect to login).
+  return raceTimeout(_doRequireSession(), 10_000, 'auth-check');
+}
+
+async function _doRequireSession() {
+  if (import.meta.env.DEV) console.log('[requireSession] start');
+
   // Step 1: try reading the existing session from memory/storage
   const { data, error } = await safeGetSession();
-  if (error) throw error;
+  if (error) {
+    if (import.meta.env.DEV) console.error('[requireSession] getSession error:', error);
+    throw error;
+  }
 
   if (data.session) {
-    // Check if the token is about to expire (within 60 seconds)
-    const expiresAt = data.session.expires_at; // Unix timestamp in seconds
+    const expiresAt = data.session.expires_at;
     const nowSec = Math.floor(Date.now() / 1000);
     if (expiresAt && expiresAt - nowSec < 60) {
-      if (import.meta.env.DEV) {
-        console.log('[helpCenterApi] Token expiring soon, proactively refreshing…');
-      }
+      if (import.meta.env.DEV) console.log('[requireSession] token expiring soon, refreshing…');
       const { data: refreshData, error: refreshErr } = await supabase.auth.refreshSession();
-      if (!refreshErr && refreshData.session) {
-        return refreshData.session;
-      }
-      // Refresh failed but current token is still technically valid — use it
+      if (!refreshErr && refreshData.session) return refreshData.session;
       if (expiresAt > nowSec) return data.session;
     } else {
-      if (import.meta.env.DEV) {
-        console.log('[helpCenterApi] Session OK — user:', data.session.user.id);
-      }
+      if (import.meta.env.DEV) console.log('[requireSession] session OK, user:', data.session.user.id);
       return data.session;
     }
   }
 
-  // Step 2: session is null — wait briefly for auto-refresh to complete, then retry
-  if (import.meta.env.DEV) {
-    console.log('[helpCenterApi] No session, waiting 1s for auto-refresh…');
-  }
+  // Step 2: session is null — wait briefly for auth init to complete, then retry
+  if (import.meta.env.DEV) console.log('[requireSession] no session, waiting 1 s…');
   await new Promise(r => setTimeout(r, 1000));
 
   const { data: retryData } = await safeGetSession();
   if (retryData.session) {
-    if (import.meta.env.DEV) {
-      console.log('[helpCenterApi] Session found on retry — user:', retryData.session.user.id);
-    }
+    if (import.meta.env.DEV) console.log('[requireSession] session found on retry');
     return retryData.session;
   }
 
   // Step 3: attempt an explicit token refresh before giving up
-  console.warn('[helpCenterApi] No session after retry, attempting refreshSession…');
+  if (import.meta.env.DEV) console.log('[requireSession] attempting refreshSession…');
   const { data: refreshData, error: refreshErr } = await supabase.auth.refreshSession();
   if (refreshErr) {
-    console.error('[helpCenterApi] refreshSession failed:', refreshErr.message);
+    console.error('[requireSession] refreshSession failed:', refreshErr.message);
     throw new Error('No active session. Please sign in again.');
   }
   if (!refreshData.session) {
-    console.error('[helpCenterApi] refreshSession returned no session');
+    console.error('[requireSession] refreshSession returned no session');
     throw new Error('No active session. Please sign in again.');
   }
 
-  if (import.meta.env.DEV) {
-    console.log('[helpCenterApi] Session recovered via refresh — user:', refreshData.session.user.id);
-  }
+  if (import.meta.env.DEV) console.log('[requireSession] session recovered via refresh');
   return refreshData.session;
 }
 
@@ -485,125 +632,145 @@ type ArticleInput = Omit<HcArticle, 'id' | 'created_at' | 'updated_at'>;
 // ── Category CRUD ──
 
 export async function adminCreateCategory(input: CategoryInput): Promise<HcCategory> {
-  await requireSession();
-  const { data, error } = await supabase
-    .from('hc_categories')
-    .insert(input)
-    .select()
-    .single();
-  if (error) throw error;
-  emitDataChange('hc_categories');
-  return data;
+  return raceTimeout((async () => {
+    await requireSession();
+    const { data, error } = await supabase
+      .from('hc_categories')
+      .insert(input)
+      .select()
+      .single();
+    if (error) throw error;
+    emitDataChange('hc_categories');
+    return data;
+  })(), 15_000, 'adminCreateCategory');
 }
 
 export async function adminUpdateCategory(id: string, updates: Partial<CategoryInput>): Promise<HcCategory> {
-  await requireSession();
-  const { data, error } = await supabase
-    .from('hc_categories')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
-  if (error) throw error;
-  emitDataChange('hc_categories');
-  return data;
+  return raceTimeout((async () => {
+    const session = await requireSession();
+    if (import.meta.env.DEV) console.log('[adminUpdateCategory] PATCH id=', id, updates);
+
+    // Raw PATCH with Prefer: return=minimal — no RETURNING *, no stack depth.
+    await patchRow('hc_categories', id, updates as Record<string, unknown>, session.access_token);
+
+    if (import.meta.env.DEV) console.log('[adminUpdateCategory] OK');
+    emitDataChange('hc_categories');
+
+    // Return a synthetic row — callers navigate away and the list re-fetches.
+    // Avoids an authenticated SELECT that could also trigger recursive RLS.
+    return { id, ...updates } as unknown as HcCategory;
+  })(), 15_000, 'adminUpdateCategory');
 }
 
 export async function adminDeleteCategory(id: string): Promise<void> {
-  await requireSession();
-  const { error } = await supabase.from('hc_categories').delete().eq('id', id);
-  if (error) throw error;
-  emitDataChange('hc_categories');
+  return raceTimeout((async () => {
+    await requireSession();
+    const { error } = await supabase.from('hc_categories').delete().eq('id', id);
+    if (error) throw error;
+    emitDataChange('hc_categories');
+  })(), 15_000, 'adminDeleteCategory');
 }
 
 // ── Section CRUD ──
 
 export async function adminCreateSection(input: SectionInput): Promise<HcSection> {
-  await requireSession();
-  const { data, error } = await supabase
-    .from('hc_sections')
-    .insert(input)
-    .select()
-    .single();
-  if (error) throw error;
-  emitDataChange('hc_sections');
-  return data;
+  return raceTimeout((async () => {
+    await requireSession();
+    const { data, error } = await supabase
+      .from('hc_sections')
+      .insert(input)
+      .select()
+      .single();
+    if (error) throw error;
+    emitDataChange('hc_sections');
+    return data;
+  })(), 15_000, 'adminCreateSection');
 }
 
 export async function adminUpdateSection(id: string, updates: Partial<SectionInput>): Promise<HcSection> {
-  await requireSession();
-  const { data, error } = await supabase
-    .from('hc_sections')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
-  if (error) throw error;
-  emitDataChange('hc_sections');
-  return data;
+  return raceTimeout((async () => {
+    const session = await requireSession();
+    if (import.meta.env.DEV) console.log('[adminUpdateSection] PATCH id=', id, updates);
+
+    await patchRow('hc_sections', id, updates as Record<string, unknown>, session.access_token);
+
+    if (import.meta.env.DEV) console.log('[adminUpdateSection] OK');
+    emitDataChange('hc_sections');
+    return { id, ...updates } as unknown as HcSection;
+  })(), 15_000, 'adminUpdateSection');
 }
 
 export async function adminDeleteSection(id: string): Promise<void> {
-  await requireSession();
-  const { error } = await supabase.from('hc_sections').delete().eq('id', id);
-  if (error) throw error;
-  emitDataChange('hc_sections');
+  return raceTimeout((async () => {
+    await requireSession();
+    const { error } = await supabase.from('hc_sections').delete().eq('id', id);
+    if (error) throw error;
+    emitDataChange('hc_sections');
+  })(), 15_000, 'adminDeleteSection');
 }
 
 // ── Article CRUD ──
 
 export async function adminCreateArticle(input: ArticleInput): Promise<HcArticle> {
-  await requireSession();
-  const { data, error } = await supabase
-    .from('hc_articles')
-    .insert(input)
-    .select()
-    .single();
-  if (error) throw error;
-  emitDataChange('hc_articles');
-  return data;
+  return raceTimeout((async () => {
+    await requireSession();
+    const { data, error } = await supabase
+      .from('hc_articles')
+      .insert(input)
+      .select()
+      .single();
+    if (error) throw error;
+    emitDataChange('hc_articles');
+    return data;
+  })(), 15_000, 'adminCreateArticle');
 }
 
 export async function adminUpdateArticle(id: string, updates: Partial<ArticleInput>): Promise<HcArticle> {
-  await requireSession();
-  const { data, error } = await supabase
-    .from('hc_articles')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
-  if (error) throw error;
-  emitDataChange('hc_articles');
-  return data;
+  return raceTimeout((async () => {
+    const session = await requireSession();
+    if (import.meta.env.DEV) console.log('[adminUpdateArticle] PATCH id=', id);
+
+    await patchRow('hc_articles', id, updates as Record<string, unknown>, session.access_token);
+
+    if (import.meta.env.DEV) console.log('[adminUpdateArticle] OK');
+    emitDataChange('hc_articles');
+    return { id, ...updates } as unknown as HcArticle;
+  })(), 15_000, 'adminUpdateArticle');
 }
 
 export async function adminDeleteArticle(id: string): Promise<void> {
-  await requireSession();
-  const { error } = await supabase.from('hc_articles').delete().eq('id', id);
-  if (error) throw error;
-  emitDataChange('hc_articles');
+  return raceTimeout((async () => {
+    await requireSession();
+    const { error } = await supabase.from('hc_articles').delete().eq('id', id);
+    if (error) throw error;
+    emitDataChange('hc_articles');
+  })(), 15_000, 'adminDeleteArticle');
 }
 
 // ── Counts ──
 
 export async function adminGetSectionCount(categoryId: string): Promise<number> {
-  await requireSession();
-  const { count, error } = await supabase
-    .from('hc_sections')
-    .select('*', { count: 'exact', head: true })
-    .eq('category_id', categoryId);
-  if (error) throw error;
-  return count || 0;
+  return raceTimeout((async () => {
+    await requireSession();
+    const { count, error } = await supabase
+      .from('hc_sections')
+      .select('*', { count: 'exact', head: true })
+      .eq('category_id', categoryId);
+    if (error) throw error;
+    return count || 0;
+  })(), 15_000, 'adminGetSectionCount');
 }
 
 export async function adminGetArticleCount(sectionId: string): Promise<number> {
-  await requireSession();
-  const { count, error } = await supabase
-    .from('hc_articles')
-    .select('*', { count: 'exact', head: true })
-    .eq('section_id', sectionId);
-  if (error) throw error;
-  return count || 0;
+  return raceTimeout((async () => {
+    await requireSession();
+    const { count, error } = await supabase
+      .from('hc_articles')
+      .select('*', { count: 'exact', head: true })
+      .eq('section_id', sectionId);
+    if (error) throw error;
+    return count || 0;
+  })(), 15_000, 'adminGetArticleCount');
 }
 
 // ─── Default Category Seeding ────────────────────────────────
@@ -652,13 +819,14 @@ const DEFAULT_CATEGORIES: Omit<HcCategory, 'id' | 'created_at' | 'updated_at'>[]
 ];
 
 export async function adminSeedDefaultCategories(): Promise<HcCategory[]> {
-  await requireSession();
-  const { data, error } = await supabase
-    .from('hc_categories')
-    .upsert(DEFAULT_CATEGORIES, { onConflict: 'slug', ignoreDuplicates: true })
-    .select();
-  if (error) throw error;
-  return adminGetAllCategories();
+  return raceTimeout((async () => {
+    await requireSession();
+    const { error } = await supabase
+      .from('hc_categories')
+      .upsert(DEFAULT_CATEGORIES, { onConflict: 'slug', ignoreDuplicates: true });
+    if (error) throw error;
+    return adminGetAllCategories();
+  })(), 20_000, 'adminSeedDefaultCategories');
 }
 
 // ─── Default Section Seeding ─────────────────────────────────
@@ -713,40 +881,42 @@ const DEFAULT_SECTIONS: SeedSection[] = [
  * Requires categories to be seeded first.
  */
 export async function adminSeedDefaultSections(): Promise<HcSectionWithCategory[]> {
-  await requireSession();
-  // Fetch categories to map slugs → UUIDs
-  const categories = await adminGetAllCategories();
-  const slugToId: Record<string, string> = {};
-  for (const c of categories) {
-    slugToId[c.slug] = c.id;
-  }
-
-  const rows: Omit<HcSection, 'id' | 'created_at' | 'updated_at'>[] = [];
-  for (const s of DEFAULT_SECTIONS) {
-    const catId = slugToId[s.categorySlug];
-    if (!catId) {
-      console.warn(`[seedSections] Category "${s.categorySlug}" not found — skipping section "${s.slug}"`);
-      continue;
+  return raceTimeout((async () => {
+    await requireSession();
+    // Fetch categories to map slugs → UUIDs
+    const categories = await adminGetAllCategories();
+    const slugToId: Record<string, string> = {};
+    for (const c of categories) {
+      slugToId[c.slug] = c.id;
     }
-    rows.push({
-      category_id: catId,
-      slug: s.slug,
-      title: s.title,
-      title_ar: s.title_ar,
-      description: s.description,
-      description_ar: s.description_ar,
-      icon: s.icon,
-      sort_order: s.sort_order,
-      is_published: true,
-    });
-  }
 
-  if (rows.length === 0) return [];
+    const rows: Omit<HcSection, 'id' | 'created_at' | 'updated_at'>[] = [];
+    for (const s of DEFAULT_SECTIONS) {
+      const catId = slugToId[s.categorySlug];
+      if (!catId) {
+        console.warn(`[seedSections] Category "${s.categorySlug}" not found — skipping section "${s.slug}"`);
+        continue;
+      }
+      rows.push({
+        category_id: catId,
+        slug: s.slug,
+        title: s.title,
+        title_ar: s.title_ar,
+        description: s.description,
+        description_ar: s.description_ar,
+        icon: s.icon,
+        sort_order: s.sort_order,
+        is_published: true,
+      });
+    }
 
-  const { error } = await supabase
-    .from('hc_sections')
-    .upsert(rows, { onConflict: 'category_id,slug', ignoreDuplicates: true });
+    if (rows.length === 0) return [];
 
-  if (error) throw error;
-  return adminGetAllSections();
+    const { error } = await supabase
+      .from('hc_sections')
+      .upsert(rows, { onConflict: 'category_id,slug', ignoreDuplicates: true });
+
+    if (error) throw error;
+    return adminGetAllSections();
+  })(), 25_000, 'adminSeedDefaultSections');
 }

@@ -28,9 +28,11 @@ export default function AdminCategoryEditor() {
 
   useEffect(() => {
     if (!isNew && categoryId) {
+      if (import.meta.env.DEV) console.log('[EditCategory] loading category id=', categoryId);
       adminGetCategoryById(categoryId)
         .then((cat) => {
           if (cat) {
+            if (import.meta.env.DEV) console.log('[EditCategory] init form once, slug=', cat.slug);
             setForm({
               slug: cat.slug,
               title: cat.title,
@@ -76,14 +78,19 @@ export default function AdminCategoryEditor() {
         is_published: form.is_published,
       };
 
+      if (import.meta.env.DEV) console.log('[EditCategory] save start', { isNew, categoryId, payload });
+
       if (isNew) {
-        await adminCreateCategory(payload);
+        const created = await adminCreateCategory(payload);
+        if (import.meta.env.DEV) console.log('[EditCategory] save end (created)', created.id);
       } else {
-        await adminUpdateCategory(categoryId!, payload);
+        const updated = await adminUpdateCategory(categoryId!, payload);
+        if (import.meta.env.DEV) console.log('[EditCategory] save end (updated)', updated.id);
       }
 
       navigate('/admin/help-center');
     } catch (err: any) {
+      if (import.meta.env.DEV) console.error('[EditCategory] save error:', err);
       setError(err.message || 'Failed to save category.');
     } finally {
       setSaving(false);
@@ -92,6 +99,7 @@ export default function AdminCategoryEditor() {
 
   const autoSlug = () => {
     if (form.title && !form.slug) {
+      if (import.meta.env.DEV) console.log('[EditCategory] autoslug update from title=', form.title);
       setForm((f) => ({
         ...f,
         slug: f.title

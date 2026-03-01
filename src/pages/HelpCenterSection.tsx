@@ -25,8 +25,10 @@ export default function HelpCenterSection() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  useEffect(() => { console.log('[HC_SECTION] mounted, slug:', categorySlug, '/', sectionSlug); }, []);
+
   const fetchData = useCallback(() => {
-    if (!categorySlug || !sectionSlug) return;
+    if (!categorySlug || !sectionSlug) { setLoading(false); return; }
     setLoading(true);
     getHcCategoryBySlug(categorySlug)
       .then(async (cat) => {

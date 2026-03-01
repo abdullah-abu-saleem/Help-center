@@ -36,18 +36,60 @@ if (!supabaseUrl.startsWith('https://')) {
 // ── DEV-only: log connection info (never log full key) ──────────────────────
 
 if (import.meta.env.DEV) {
+  console.log('[Supabase] url=', supabaseUrl);
+  console.log('[Supabase] anonKeyLen=', supabaseKey?.length);
   try {
     const host = new URL(supabaseUrl).host;
     console.log(`[Supabase] Project : ${host}`);
-    console.log(`[Supabase] Key     : ${supabaseKey.substring(0, 12)}… (${supabaseKey.length} chars)`);
   } catch {
     console.warn('[Supabase] ⚠ Could not parse VITE_SUPABASE_URL');
   }
 }
 
+// ── DEV-only fetch tracer ──────────────────────────────────────────────────
+// Logs start/end of every Supabase HTTP request without modifying behavior.
+// No timeout, no AbortController — just calls real window.fetch and returns
+// the Response untouched. Only compiled into DEV builds.
+
+let _devFetch: typeof fetch | undefined;
+
+if (import.meta.env.DEV) {
+  const _nativeFetch = globalThis.fetch.bind(globalThis);
+  _devFetch = async (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ): Promise<Response> => {
+    const url =
+      typeof input === 'string'
+        ? input
+        : input instanceof URL
+          ? input.href
+          : input.url;
+    const method = init?.method || 'GET';
+    const t0 = performance.now();
+    console.log(`[Supabase fetch] START ${method} ${url}`);
+    try {
+      const res = await _nativeFetch(input, init);
+      const ms = Math.round(performance.now() - t0);
+      console.log(
+        `[Supabase fetch] END status=${res.status} duration=${ms}ms ${url}`,
+      );
+      return res;
+    } catch (err) {
+      const ms = Math.round(performance.now() - t0);
+      console.error(
+        `[Supabase fetch] FAIL duration=${ms}ms ${url}`,
+        err,
+      );
+      throw err;
+    }
+  };
+}
+
 // ── Clear stale Supabase auth keys ──────────────────────────────────────────
-// Old sb-* keys from previous sessions cause LockManager conflicts.
-// Runs ONCE per tab session (guarded by sessionStorage flag).
+// Only removes the OLD_STORAGE_KEY from a previous migration.
+// Does NOT touch sb-* keys — those may belong to a valid active session.
+// sb-* cleanup is reserved for recoverFromLockError() as a last resort.
 
 const STORAGE_KEY = 'string-supabase-auth';
 const OLD_STORAGE_KEY = 'string-auth';
@@ -56,20 +98,10 @@ const CLEANUP_FLAG = 'string-sb-cleaned';
 function clearStaleSupabaseKeys() {
   try {
     if (sessionStorage.getItem(CLEANUP_FLAG)) return; // already cleaned this tab session
-    const keysToRemove: string[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith('sb-')) {
-        keysToRemove.push(key);
-      }
-    }
-    // Also clear orphaned session from old storageKey
+    // Only remove the legacy key — never wipe sb-* on normal boot
     if (localStorage.getItem(OLD_STORAGE_KEY)) {
-      keysToRemove.push(OLD_STORAGE_KEY);
-    }
-    for (const key of keysToRemove) {
-      localStorage.removeItem(key);
-      if (import.meta.env.DEV) console.log('[Supabase] Cleared stale key:', key);
+      localStorage.removeItem(OLD_STORAGE_KEY);
+      if (import.meta.env.DEV) console.log('[Supabase] Cleared stale key:', OLD_STORAGE_KEY);
     }
     sessionStorage.setItem(CLEANUP_FLAG, '1');
   } catch {
@@ -84,6 +116,14 @@ clearStaleSupabaseKeys();
 
 const GLOBAL_KEY = '__string_supabase' as const;
 
+// No-op lock: bypasses navigator.locks entirely to prevent PKCE deadlock.
+// Immediately invokes the callback — safe for single-tab apps.
+const noopLock = async <R>(
+  _name: string,
+  _acquireTimeout: number,
+  fn: () => Promise<R>,
+): Promise<R> => fn();
+
 function getOrCreateClient(): SupabaseClient {
   const existing = (globalThis as any)[GLOBAL_KEY] as SupabaseClient | undefined;
   if (existing) {
@@ -91,14 +131,24 @@ function getOrCreateClient(): SupabaseClient {
     return existing;
   }
 
+  const authConfig = {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    flowType: 'implicit' as const,
+    lock: noopLock,
+    storageKey: STORAGE_KEY,
+  };
+
+  if (import.meta.env.DEV) {
+    console.log(`[Supabase] auth config → flowType=${authConfig.flowType}, lock=noopLock`);
+  }
+
   const client = createClient(supabaseUrl!, supabaseKey!, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-      flowType: 'pkce',
-      storageKey: STORAGE_KEY,
-    },
+    auth: authConfig,
+    // DEV-only: transparent fetch tracer for request visibility.
+    // In production _devFetch is undefined so no global.fetch override is set.
+    ...(_devFetch ? { global: { fetch: _devFetch } } : {}),
   });
 
   (globalThis as any)[GLOBAL_KEY] = client;
@@ -107,6 +157,37 @@ function getOrCreateClient(): SupabaseClient {
 }
 
 export const supabase = getOrCreateClient();
+
+// ── Public-only client (no session, no token refresh) ───────────────────────
+// Used by all public read functions so they never carry an expired JWT and
+// never trigger auth initialization, token refresh, or navigator.locks.
+
+const PUBLIC_GLOBAL_KEY = '__string_supabase_public' as const;
+
+function getOrCreatePublicClient(): SupabaseClient {
+  const existing = (globalThis as any)[PUBLIC_GLOBAL_KEY] as SupabaseClient | undefined;
+  if (existing) {
+    if (import.meta.env.DEV) console.log('[Supabase] Reusing public singleton (HMR)');
+    return existing;
+  }
+
+  const client = createClient(supabaseUrl!, supabaseKey!, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+      flowType: 'implicit' as const,
+      lock: noopLock,
+    },
+    ...(_devFetch ? { global: { fetch: _devFetch } } : {}),
+  });
+
+  (globalThis as any)[PUBLIC_GLOBAL_KEY] = client;
+  if (import.meta.env.DEV) console.log('[Supabase] Created public client (no session)');
+  return client;
+}
+
+export const supabasePublic = getOrCreatePublicClient();
 
 // ── Connection health check (used by login pages) ──────────────────────────
 

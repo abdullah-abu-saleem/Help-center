@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { useI18n } from '../lib/i18n';
@@ -17,21 +17,33 @@ export default function HelpCenterCategory() {
   const [sections, setSections] = useState<HcSection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const hasData = useRef(false);
+
+  useEffect(() => { console.log('[HC_CATEGORY] mounted, slug:', categorySlug); }, []);
 
   const fetchData = useCallback(() => {
-    if (!categorySlug) return;
-    setLoading(true);
+    if (!categorySlug) { setLoading(false); return; }
+    // Only show spinner on first load — preserve visible data during refetches
+    if (!hasData.current) setLoading(true);
+    if (import.meta.env.DEV) console.log('[HelpCenterCategory] fetchData START, slug:', categorySlug);
     getHcCategoryBySlug(categorySlug)
       .then(async (cat) => {
         if (!cat) {
-          setError('Category not found.');
+          if (!hasData.current) setError('Category not found.');
           return;
         }
         setCategory(cat);
         const secs = await getHcSectionsByCategory(cat.id);
         setSections(secs);
+        setError('');
+        hasData.current = true;
+        if (import.meta.env.DEV) console.log('[HelpCenterCategory] fetchData END, sections:', secs.length);
       })
-      .catch((err) => setError(err.message))
+      .catch((err) => {
+        if (import.meta.env.DEV) console.warn('[HelpCenterCategory] fetchData FAILED:', err.message);
+        // Only show error if we have no previously-loaded data
+        if (!hasData.current) setError(err.message);
+      })
       .finally(() => setLoading(false));
   }, [categorySlug]);
 

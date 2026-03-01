@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, Navigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
-import { getCategoryBySlug, getSectionsByCategoryId, getFeaturedArticlesByCategory } from '../lib/api';
 import {
   getHcCategoryBySlug,
   getHcSectionsByCategory,
@@ -10,6 +9,7 @@ import {
   type HcSection,
   type HcArticle,
 } from '../lib/helpCenterApi';
+import { warmUp, withRetry } from '../lib/supabaseRetry';
 import { FEATURE_CATEGORIES, ROLE_SLUG_MAP } from '../data';
 import { FeatureCard } from '../components/FeatureCard';
 import { useI18n } from '../lib/i18n';
@@ -159,66 +159,142 @@ const defaultIcon = (
 
 export default function CategoryPage() {
   const { t, dir, localize } = useI18n();
-  const { categorySlug } = useParams();
+  const params = useParams();
+  const categorySlug = params.categorySlug;
+  const [fetchPhase, setFetchPhase] = useState('idle');
 
-  // Supabase-first with static fallback
-  const [dbCategory, setDbCategory] = useState<HcCategory | null>(null);
-  const [dbSections, setDbSections] = useState<HcSection[]>([]);
-  const [dbFeatured, setDbFeatured] = useState<HcArticle[]>([]);
-  const [dbLoaded, setDbLoaded] = useState(false);
+  const [category, setCategory] = useState<(HcCategory & { order: number }) | null>(null);
+  const [sections, setSections] = useState<(HcSection & { categoryId: string; order: number })[]>([]);
+  const [featuredArticles, setFeaturedArticles] = useState<(HcArticle & { sectionId: string; bodyMarkdown: string; updatedAt: string; isFeatured: boolean; isTop: boolean })[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState('');
+
+  // ── DIAGNOSTIC: log ALL params so we can see the exact shape ──
+  console.log('[CategoryPage] params=', JSON.stringify(params), 'slug=', categorySlug);
+
+  useEffect(() => { console.log('[HC_CATEGORY_PAGE] mounted, slug:', categorySlug); }, []);
 
   useEffect(() => {
+    console.log('[CategoryPage] useEffect FIRED, categorySlug=', categorySlug);
+    if (!categorySlug) {
+      console.warn('[CategoryPage] slug is undefined — stopping spinner');
+      setFetchPhase('no-slug');
+      setLoaded(true);
+      setError('No category specified.');
+      return;
+    }
+
     let cancelled = false;
+    setFetchPhase('starting');
+
+    // No safety timeout — warmUp (10s) + withRetry (8s × 3) already have their
+    // own timeouts. A hard timer here was forcing loaded=true with empty state.
+    setLoaded(false);
+    setError('');
     (async () => {
       try {
-        const cat = await getHcCategoryBySlug(categorySlug || '');
+        // 1. Wake Supabase (cached after first call) — non-blocking
+        setFetchPhase('warm-up');
+        const health = await warmUp();
         if (cancelled) return;
-        if (cat) {
-          setDbCategory(cat);
-          const [secs, feats] = await Promise.all([
-            getHcSectionsByCategory(cat.id),
-            getHcFeaturedArticlesByCategory(cat.id),
-          ]);
-          if (!cancelled) {
-            setDbSections(secs);
-            setDbFeatured(feats);
-          }
+        if (health.coldStart) {
+          console.warn('[CategoryPage] Supabase cold start detected (%dms)', health.ms);
         }
-      } catch {
-        // Supabase unavailable — will fall back to static data
+        if (!health.ok) {
+          // warmUp failed — log and proceed anyway. The real data fetch
+          // may still succeed (e.g. warmUp timeout vs actual query).
+          if (import.meta.env.DEV) console.warn('[CategoryPage] warmUp failed, proceeding with data fetch:', health.error);
+        }
+
+        // 2. Category (critical) — with retry
+        setFetchPhase('fetching-category');
+        console.log('[CategoryPage] Fetching category:', categorySlug);
+        const cat = await withRetry(
+          () => getHcCategoryBySlug(categorySlug!),
+          'getHcCategoryBySlug',
+        );
+        console.log('[CategoryPage] Category result:', cat ? cat.slug : 'null');
+        if (cancelled) return;
+
+        if (cat) {
+          setCategory({ ...cat, order: cat.sort_order });
+
+          // 3. Sections (critical) — with retry
+          setFetchPhase('fetching-sections');
+          const secs = await withRetry(
+            () => getHcSectionsByCategory(cat.id),
+            'getHcSectionsByCategory',
+          );
+          if (cancelled) return;
+          console.log('[CategoryPage] Sections:', secs.length);
+          setSections(secs.map(s => ({ ...s, categoryId: s.category_id, order: s.sort_order })));
+
+          // 4. Featured (non-critical) — with retry, swallow errors
+          setFetchPhase('fetching-featured');
+          let feats: HcArticle[] = [];
+          try {
+            feats = await withRetry(
+              () => getHcFeaturedArticlesByCategory(cat.id),
+              'getHcFeaturedArticlesByCategory',
+            );
+          } catch (featErr: any) {
+            console.warn('[CategoryPage] Featured articles failed (non-critical):', featErr?.message);
+          }
+          if (!cancelled) {
+            console.log('[CategoryPage] Featured:', feats.length);
+            setFeaturedArticles(feats.map(a => ({ ...a, sectionId: a.section_id, bodyMarkdown: a.body_markdown, bodyMarkdown_ar: a.body_markdown_ar, updatedAt: a.updated_at, isFeatured: true, isTop: false })));
+          }
+        } else {
+          console.log('[CategoryPage] No category found for slug:', categorySlug);
+        }
+      } catch (err: any) {
+        console.error('[CategoryPage] Critical error:', err);
+        if (!cancelled) {
+          setError(err?.message || 'Failed to load category');
+          window.dispatchEvent(new CustomEvent('hc-debug-error', { detail: err?.message || 'Unknown' }));
+        }
       } finally {
-        if (!cancelled) setDbLoaded(true);
+        if (!cancelled) {
+          setFetchPhase('done');
+          setLoaded(true);
+          window.dispatchEvent(new Event('hc-debug-fetch'));
+        }
       }
     })();
     return () => { cancelled = true; };
   }, [categorySlug]);
 
-  // Use Supabase data if available, otherwise fall back to static
-  const staticCategory = getCategoryBySlug(categorySlug || '');
-  const category = dbLoaded && dbCategory
-    ? { ...dbCategory, id: dbCategory.id, slug: dbCategory.slug, order: dbCategory.sort_order, icon: dbCategory.icon }
-    : staticCategory;
-
-  if (dbLoaded && !category) {
-    return <Navigate to="/404" replace />;
-  }
-  if (!category) {
-    // Still loading from Supabase
+  if (!loaded) {
     return (
       <Layout>
-        <div className="flex items-center justify-center py-20">
+        <div className="flex flex-col items-center justify-center py-20">
           <div className="w-8 h-8 border-2 border-slate-200 border-t-[#6366f1] rounded-full animate-spin" />
+          {import.meta.env.DEV && (
+            <div style={{ marginTop: 16, fontSize: 11, fontFamily: 'monospace', color: '#94a3b8', textAlign: 'center' }}>
+              <div>CategoryPage | slug: {categorySlug ?? 'UNDEFINED'}</div>
+              <div>phase: {fetchPhase}</div>
+            </div>
+          )}
         </div>
       </Layout>
     );
   }
+  if (error && !category) {
+    // Only show error screen when we have NO previously-loaded data.
+    // If category data exists, keep showing it (stale > blank).
+    return (
+      <Layout>
+        <div className="flex flex-col items-center justify-center py-20 text-center px-6">
+          <p className="text-red-500 text-sm font-semibold mb-1">Failed to load category</p>
+          <p className="text-slate-400 text-xs">{error}</p>
+        </div>
+      </Layout>
+    );
+  }
+  if (!category) {
+    return <Navigate to="/404" replace />;
+  }
 
-  const sections = dbLoaded && dbCategory
-    ? dbSections.map(s => ({ ...s, id: s.id, categoryId: s.category_id, slug: s.slug, order: s.sort_order }))
-    : getSectionsByCategoryId(category.id);
-  const featuredArticles = dbLoaded && dbCategory
-    ? dbFeatured.map(a => ({ ...a, sectionId: a.section_id, bodyMarkdown: a.body_markdown, bodyMarkdown_ar: a.body_markdown_ar, updatedAt: a.updated_at, isFeatured: true, isTop: false }))
-    : getFeaturedArticlesByCategory(category.id);
   const isRtl = dir === 'rtl';
 
   const roleSlug = ROLE_SLUG_MAP[category.slug];
