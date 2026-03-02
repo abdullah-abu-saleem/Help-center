@@ -18,6 +18,7 @@ import {
 } from '../lib/helpCenterApi';
 import { scrollToHash } from '../lib/utils';
 import { HelpCenterShell } from '../components/theme/HelpCenterShell';
+import { ResourcesShell } from '../components/resources/ResourcesShell';
 import { COLORS } from '../theme/colors';
 
 export default function HelpSectionLandingPage() {
@@ -132,9 +133,13 @@ export default function HelpSectionLandingPage() {
   if (!dbLoaded) {
     return (
       <Layout>
+        <HelpCenterShell noBg>
+        <ResourcesShell>
         <div className="flex items-center justify-center py-20">
           <div className="w-8 h-8 border-2 border-slate-200 border-t-[#ed3b91] rounded-full animate-spin" />
         </div>
+        </ResourcesShell>
+        </HelpCenterShell>
       </Layout>
     );
   }
@@ -142,10 +147,14 @@ export default function HelpSectionLandingPage() {
   if (dbError) {
     return (
       <Layout>
+        <HelpCenterShell noBg>
+        <ResourcesShell>
         <div className="flex flex-col items-center justify-center py-20 text-center px-6">
           <p className="text-red-500 text-sm font-semibold mb-1">Failed to load section</p>
           <p className="text-slate-400 text-xs">{dbError}</p>
         </div>
+        </ResourcesShell>
+        </HelpCenterShell>
       </Layout>
     );
   }
@@ -165,7 +174,8 @@ export default function HelpSectionLandingPage() {
 
   return (
     <Layout hero={SearchStrip}>
-      <HelpCenterShell>
+      <HelpCenterShell noBg>
+      <ResourcesShell>
       <div className="pb-20">
 
         {/* Breadcrumbs */}
@@ -185,7 +195,7 @@ export default function HelpSectionLandingPage() {
 
             {/* Left Sidebar Navigation */}
             <aside className="hidden lg:block">
-              <div className="glass-sidebar p-6 sticky top-24" style={{ background: '#fff' }}>
+              <div className="glass-sidebar p-6 sticky top-24" style={{ background: 'rgba(255,255,255,0.85)' }}>
                 <h3 className="text-[15px] font-bold text-[#091e42] mb-5">{localize(section, 'title')}</h3>
                 <nav className="text-[15px]">
                   <ul className="space-y-1">
@@ -323,6 +333,7 @@ export default function HelpSectionLandingPage() {
           </div>
         </div>
       </div>
+      </ResourcesShell>
       </HelpCenterShell>
     </Layout>
   );

@@ -14,6 +14,7 @@ import { FEATURE_CATEGORIES, ROLE_SLUG_MAP } from '../data';
 import { FeatureCard } from '../components/FeatureCard';
 import { useI18n } from '../lib/i18n';
 import { HelpCenterShell } from '../components/theme/HelpCenterShell';
+import { ResourcesShell } from '../components/resources/ResourcesShell';
 import { SpotlightCard } from '../components/ui/SpotlightCard';
 import { COLORS } from '../theme/colors';
 
@@ -270,6 +271,8 @@ export default function CategoryPage() {
   if (!loaded) {
     return (
       <Layout>
+        <HelpCenterShell noBg>
+        <ResourcesShell>
         <div className="flex flex-col items-center justify-center py-20">
           <div className="w-8 h-8 border-2 border-slate-200 border-t-[#ed3b91] rounded-full animate-spin" />
           {import.meta.env.DEV && (
@@ -279,6 +282,8 @@ export default function CategoryPage() {
             </div>
           )}
         </div>
+        </ResourcesShell>
+        </HelpCenterShell>
       </Layout>
     );
   }
@@ -287,10 +292,14 @@ export default function CategoryPage() {
     // If category data exists, keep showing it (stale > blank).
     return (
       <Layout>
+        <HelpCenterShell noBg>
+        <ResourcesShell>
         <div className="flex flex-col items-center justify-center py-20 text-center px-6">
           <p className="text-red-500 text-sm font-semibold mb-1">Failed to load category</p>
           <p className="text-slate-400 text-xs">{error}</p>
         </div>
+        </ResourcesShell>
+        </HelpCenterShell>
       </Layout>
     );
   }
@@ -308,7 +317,8 @@ export default function CategoryPage() {
 
   return (
     <Layout>
-      <HelpCenterShell>
+      <HelpCenterShell noBg>
+      <ResourcesShell>
       <div><div className="container mx-auto px-4 md:px-6 py-12 max-w-6xl">
         {/* 1) Top Breadcrumb Line */}
         <nav className="flex items-center text-sm text-slate-500 mb-8">
@@ -387,6 +397,7 @@ export default function CategoryPage() {
             </div>
         )}
       </div></div>
+      </ResourcesShell>
       </HelpCenterShell>
     </Layout>
   );

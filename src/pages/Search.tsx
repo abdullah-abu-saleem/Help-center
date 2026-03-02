@@ -4,6 +4,7 @@ import { Layout } from '../components/Layout';
 import { searchHcArticles, type HcArticle } from '../lib/helpCenterApi';
 import { useI18n } from '../lib/i18n';
 import { HelpCenterShell } from '../components/theme/HelpCenterShell';
+import { ResourcesShell } from '../components/resources/ResourcesShell';
 import { SpotlightCard } from '../components/ui/SpotlightCard';
 import { COLORS } from '../theme/colors';
 
@@ -82,7 +83,8 @@ export default function SearchPage() {
 
   return (
     <Layout>
-      <HelpCenterShell>
+      <HelpCenterShell noBg>
+      <ResourcesShell>
       <div className="container mx-auto px-4 md:px-6 py-8">
         <div className="max-w-3xl mx-auto">
             <h1 className="text-2xl font-bold text-[#091e42] mb-2">
@@ -136,6 +138,7 @@ export default function SearchPage() {
             </div>
         </div>
       </div>
+      </ResourcesShell>
       </HelpCenterShell>
     </Layout>
   );

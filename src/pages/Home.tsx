@@ -4,6 +4,7 @@ import { Layout } from '../components/Layout';
 import { useI18n } from '../lib/i18n';
 import TutorialsSection from '../components/TutorialsSection';
 import { HelpCenterShell } from '../components/theme/HelpCenterShell';
+import { ResourcesShell } from '../components/resources/ResourcesShell';
 import { SpotlightCard } from '../components/ui/SpotlightCard';
 import { COLORS } from '../theme/colors';
 
@@ -86,6 +87,7 @@ export default function Home() {
   return (
     <Layout>
       <HelpCenterShell noBg>
+      <ResourcesShell>
       {ROUTE_DEBUG && (
         <div
           style={{
@@ -106,7 +108,7 @@ export default function Home() {
       {/* ══════════════════════════════════════════════════════
           HERO — Modern aurora mesh gradient with search
           ══════════════════════════════════════════════════════ */}
-      <section className="relative w-full overflow-hidden hero-mesh">
+      <section className="relative w-full overflow-hidden">
         {/* Animated aurora orbs */}
         <div
           className="aurora-orb aurora-orb-1"
@@ -134,11 +136,11 @@ export default function Home() {
           aria-hidden="true"
         />
 
-        {/* Bottom fade to white */}
+        {/* Bottom fade (transparent for animated bg) */}
         <div
           className="absolute inset-0"
           style={{
-            background: 'linear-gradient(to bottom, transparent 60%, rgba(255,255,255,0.5) 80%, #ffffff 100%)',
+            background: 'linear-gradient(to bottom, transparent 60%, rgba(255,255,255,0.15) 85%, rgba(255,255,255,0.3) 100%)',
           }}
           aria-hidden="true"
         />
@@ -229,13 +231,9 @@ export default function Home() {
           CATEGORY CARDS — overlapping hero
           ══════════════════════════════════════════════════════ */}
       <section
-        className="relative card-overlap"
-        style={{ zIndex: 20, marginTop: -100, paddingBottom: 16 }}
+        className="relative"
+        style={{ zIndex: 20, marginTop: -80, paddingBottom: 16 }}
       >
-        <style>{`
-          @media (min-width: 768px)  { .card-overlap { margin-top: -130px !important; } }
-          @media (min-width: 1280px) { .card-overlap { margin-top: -150px !important; } }
-        `}</style>
 
         <div
           className="relative z-10 mx-auto px-6 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4"
@@ -403,6 +401,7 @@ export default function Home() {
           </div>
         </div>
       </section>
+      </ResourcesShell>
       </HelpCenterShell>
     </Layout>
   );

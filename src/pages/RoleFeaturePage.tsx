@@ -17,6 +17,8 @@ import {
   type HcArticle,
 } from '../lib/helpCenterApi';
 import { scrollToHash } from '../lib/utils';
+import { HelpCenterShell } from '../components/theme/HelpCenterShell';
+import { ResourcesShell } from '../components/resources/ResourcesShell';
 
 /* Map role param → category slug used for display (breadcrumbs) */
 const ROLE_DISPLAY_CATEGORY_SLUG: Record<string, string> = {
@@ -180,9 +182,13 @@ export default function RoleFeaturePage() {
   if (!loaded) {
     return (
       <Layout>
+        <HelpCenterShell noBg>
+        <ResourcesShell>
         <div className="flex items-center justify-center py-20">
           <div className="w-8 h-8 border-2 border-slate-200 border-t-[#ed3b91] rounded-full animate-spin" />
         </div>
+        </ResourcesShell>
+        </HelpCenterShell>
       </Layout>
     );
   }
@@ -190,10 +196,14 @@ export default function RoleFeaturePage() {
   if (error) {
     return (
       <Layout>
+        <HelpCenterShell noBg>
+        <ResourcesShell>
         <div className="flex flex-col items-center justify-center py-20 text-center px-6">
           <p className="text-red-500 text-sm font-semibold mb-1">Failed to load page</p>
           <p className="text-slate-400 text-xs">{error}</p>
         </div>
+        </ResourcesShell>
+        </HelpCenterShell>
       </Layout>
     );
   }
@@ -232,7 +242,9 @@ export default function RoleFeaturePage() {
 
   return (
     <Layout hero={PurpleSearchStrip}>
-      <div className="glass-bg pb-20">
+      <HelpCenterShell noBg>
+      <ResourcesShell>
+      <div className="pb-20">
 
         {/* Breadcrumbs */}
         <div className="mx-auto max-w-7xl px-4 md:px-6 py-6">
@@ -251,7 +263,7 @@ export default function RoleFeaturePage() {
 
             {/* Left Sidebar Navigation */}
             <aside className="hidden lg:block">
-              <div className="glass-sidebar p-6 sticky top-24" style={{ background: '#fff' }}>
+              <div className="glass-sidebar p-6 sticky top-24" style={{ background: 'rgba(255,255,255,0.85)' }}>
                 <h3 className="text-[15px] font-bold text-slate-900 mb-5">{localize(category, 'title')}</h3>
                 <nav className="text-[15px]">
                   <ul className="space-y-1">
@@ -371,6 +383,8 @@ export default function RoleFeaturePage() {
           </div>
         </div>
       </div>
+      </ResourcesShell>
+      </HelpCenterShell>
     </Layout>
   );
 }

@@ -15,6 +15,7 @@ import { formatDate, uniqueSlugIds, scrollToHash } from '../lib/utils';
 import { useDataRefresh } from '../lib/dataEvents';
 import { articles as staticArticles, sections as staticSections, categories as staticCategories } from '../data';
 import { HelpCenterShell } from '../components/theme/HelpCenterShell';
+import { ResourcesShell } from '../components/resources/ResourcesShell';
 import { COLORS } from '../theme/colors';
 
 // ── Stable references (defined outside component to prevent re-renders) ──
@@ -189,19 +190,27 @@ export default function ArticlePage() {
   if (loading) {
     return (
       <Layout>
+        <HelpCenterShell noBg>
+        <ResourcesShell>
         <div className="flex items-center justify-center py-20">
           <div className="w-8 h-8 border-2 border-slate-200 border-t-[#ed3b91] rounded-full animate-spin" />
         </div>
+        </ResourcesShell>
+        </HelpCenterShell>
       </Layout>
     );
   }
   if (error) {
     return (
       <Layout>
+        <HelpCenterShell noBg>
+        <ResourcesShell>
         <div className="flex flex-col items-center justify-center py-20 text-center px-6">
           <p className="text-red-500 text-sm font-semibold mb-1">Failed to load article</p>
           <p className="text-slate-400 text-xs">{error}</p>
         </div>
+        </ResourcesShell>
+        </HelpCenterShell>
       </Layout>
     );
   }
@@ -211,7 +220,8 @@ export default function ArticlePage() {
 
   return (
     <Layout>
-      <HelpCenterShell>
+      <HelpCenterShell noBg>
+      <ResourcesShell>
       <div className="min-h-screen">
         <div className="container mx-auto px-4 md:px-6 max-w-[1280px]">
 
@@ -239,7 +249,7 @@ export default function ArticlePage() {
                  </button>
               </div>
 
-              <div className="p-4 lg:p-6 lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto custom-scrollbar glass-sidebar" style={{ background: '#fff' }}>
+              <div className="p-4 lg:p-6 lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto custom-scrollbar glass-sidebar" style={{ background: 'rgba(255,255,255,0.85)' }}>
 
                 {/* Section Title */}
                 <div className="mb-5">
@@ -388,7 +398,7 @@ export default function ArticlePage() {
 
             {/* --- RIGHT SIDEBAR: TABLE OF CONTENTS --- */}
             <aside className="hidden lg:block">
-              <div className="sticky top-24 glass-sidebar p-5" style={{ background: '#fff' }}>
+              <div className="sticky top-24 glass-sidebar p-5" style={{ background: 'rgba(255,255,255,0.85)' }}>
                  <h4 className="font-bold text-slate-900 mb-4 text-sm uppercase tracking-wide">{t('tableOfContents')}</h4>
                  <nav>
                    <ul className="space-y-1">
@@ -427,6 +437,7 @@ export default function ArticlePage() {
           </div>
         </div>
       </div>
+      </ResourcesShell>
       </HelpCenterShell>
     </Layout>
   );
