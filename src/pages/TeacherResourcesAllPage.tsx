@@ -5,6 +5,8 @@ import { ResourcesGridView } from '../components/resources/ResourcesGridView';
 import { useI18n } from '../lib/i18n';
 import { getHcResourceVideos, type HcResourceVideo } from '../lib/helpCenterApi';
 import type { ResourceVideo } from '../data/resourceVideos';
+import { COLORS } from '../theme/colors';
+import { ResourcesShell } from '../components/resources/ResourcesShell';
 
 export default function TeacherResourcesAllPage() {
   const { lang, localize } = useI18n();
@@ -52,18 +54,20 @@ export default function TeacherResourcesAllPage() {
   if (error) {
     return (
       <Layout>
-        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <ResourcesShell>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, minHeight: 400 }}>
           <svg style={{ width: 48, height: 48, color: '#ef4444', marginBottom: 16, opacity: 0.7 }} fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
           </svg>
           <p style={{ fontSize: 15, color: '#ef4444', marginBottom: 16 }}>{error}</p>
           <Link
             to="/help/resources/teachers"
-            style={{ fontSize: 14, fontWeight: 600, color: '#ED3B91', textDecoration: 'none' }}
+            style={{ fontSize: 14, fontWeight: 600, color: COLORS.primary, textDecoration: 'none' }}
           >
             &larr; {lang === 'ar' ? 'العودة' : 'Back'}
           </Link>
         </div>
+        </ResourcesShell>
       </Layout>
     );
   }
@@ -71,7 +75,7 @@ export default function TeacherResourcesAllPage() {
   return (
     <ResourcesGridView
       videos={videos}
-      accentColor="#ED3B91"
+      accentColor={COLORS.primary}
       backTo="/help/resources/teachers"
       backLabel={lang === 'ar' ? 'العودة' : 'Back'}
       title={lang === 'ar' ? <>جميع دروس <span className="gradient-text">المعلمين</span></> : <>All <span className="gradient-text">Teacher</span> Tutorials</>}

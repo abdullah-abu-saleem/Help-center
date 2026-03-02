@@ -25,7 +25,7 @@ const STEPS = [
         <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6Z" />
       </svg>
     ),
-    color: 'from-blue-400 to-indigo-500',
+    color: 'from-blue-400 to-primary-500',
     bgColor: 'bg-blue-50',
     textColor: 'text-blue-600',
   },

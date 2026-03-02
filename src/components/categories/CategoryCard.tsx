@@ -73,8 +73,8 @@ export function CategoryCard({
     <div style={{ padding: '28px 28px 32px' }}>
       {/* Icon */}
       <div
-        className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-500 mb-5"
-        style={{ boxShadow: '0 2px 10px rgba(99,102,241,0.08)' }}
+        className="w-12 h-12 rounded-xl bg-primary-50 flex items-center justify-center text-primary-500 mb-5"
+        style={{ boxShadow: '0 2px 10px rgba(237,59,145,0.08)' }}
       >
         <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" />
@@ -99,7 +99,7 @@ export function CategoryCard({
       {/* Description */}
       <p
         className="text-sm leading-relaxed"
-        style={{ color: '#64748b', opacity: 0.78, lineHeight: 1.65 }}
+        style={{ color: '#6882a9', opacity: 0.78, lineHeight: 1.65 }}
       >
         {localized(cat.description, cat.description_ar)}
       </p>
@@ -112,7 +112,7 @@ export function CategoryCard({
           <span>Order: {cat.sort_order}</span>
         </div>
       ) : (
-        <div className="mt-5 flex items-center gap-2 text-sm font-semibold text-indigo-500 opacity-0 group-hover:opacity-100 transition-all duration-300">
+        <div className="mt-5 flex items-center gap-2 text-sm font-semibold text-primary-500 opacity-0 group-hover:opacity-100 transition-all duration-300">
           <span>{lang === 'ar' ? '\u0627\u0633\u062a\u0643\u0634\u0641' : 'Explore'}</span>
           <svg
             className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1 rtl:rotate-180 rtl:group-hover:-translate-x-1"

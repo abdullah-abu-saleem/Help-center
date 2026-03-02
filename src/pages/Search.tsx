@@ -3,6 +3,9 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { searchHcArticles, type HcArticle } from '../lib/helpCenterApi';
 import { useI18n } from '../lib/i18n';
+import { HelpCenterShell } from '../components/theme/HelpCenterShell';
+import { SpotlightCard } from '../components/ui/SpotlightCard';
+import { COLORS } from '../theme/colors';
 
 interface MappedResult {
   article: {
@@ -79,9 +82,10 @@ export default function SearchPage() {
 
   return (
     <Layout>
+      <HelpCenterShell>
       <div className="container mx-auto px-4 md:px-6 py-8">
         <div className="max-w-3xl mx-auto">
-            <h1 className="text-2xl font-bold text-slate-900 mb-2">
+            <h1 className="text-2xl font-bold text-[#091e42] mb-2">
                 {t('searchResults')} "{query}"
             </h1>
             <p className="text-slate-500 mb-8">
@@ -93,7 +97,7 @@ export default function SearchPage() {
                     <select 
                         value={sort} 
                         onChange={(e) => setSort(e.target.value as any)}
-                        className="text-sm border-none bg-transparent font-medium text-slate-600 focus:ring-0"
+                        className="text-sm border-none bg-transparent font-medium text-[#6882a9] focus:ring-0"
                     >
                         <option value="relevance">{t('sortBy')}: {t('relevance')}</option>
                         <option value="updated">{t('sortBy')}: {t('dateUpdated')}</option>
@@ -111,7 +115,7 @@ export default function SearchPage() {
                         </Link>
                         <div className="flex gap-2 mb-2">
                             {article.tags.map(tag => (
-                                <span key={tag} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded">
+                                <span key={tag} className="text-xs bg-[#fdf2f8] text-[#ed3b91] px-2 py-0.5 rounded">
                                     {tag}
                                 </span>
                             ))}
@@ -124,14 +128,15 @@ export default function SearchPage() {
                 ))}
 
                 {results.length === 0 && (
-                    <div className="bg-slate-50 rounded-lg p-8 text-center border border-slate-200">
+                    <SpotlightCard className="p-8 text-center">
                         <p className="text-slate-600 mb-4">{t('noResults')}</p>
-                        <p className="text-sm text-slate-500">{t('tryKeywords')}</p>
-                    </div>
+                        <p className="text-sm" style={{ color: COLORS.neutralLight }}>{t('tryKeywords')}</p>
+                    </SpotlightCard>
                 )}
             </div>
         </div>
       </div>
+      </HelpCenterShell>
     </Layout>
   );
 }

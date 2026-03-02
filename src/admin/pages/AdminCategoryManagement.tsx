@@ -280,7 +280,7 @@ export default function AdminCategoryManagement() {
     return (
       <div className="min-h-screen flex items-center justify-center glass-bg">
         <div className="text-center">
-          <div className="w-8 h-8 border-2 border-slate-200 border-t-indigo-500 rounded-full animate-spin mx-auto mb-4" />
+          <div className="w-8 h-8 border-2 border-slate-200 border-t-primary-500 rounded-full animate-spin mx-auto mb-4" />
           <p className="text-sm text-slate-500">Loading...</p>
         </div>
       </div>
@@ -399,7 +399,7 @@ export default function AdminCategoryManagement() {
           <div
             className="admin-card-accent"
             style={{
-              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+              background: 'linear-gradient(135deg, #ed3b91, #d6257a)',
             }}
           />
           <div className="flex items-center justify-between">
@@ -426,7 +426,7 @@ export default function AdminCategoryManagement() {
               onClick={openAddSection}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-sm font-semibold transition-all hover:scale-[1.02] active:scale-[0.98]"
               style={{
-                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                background: 'linear-gradient(135deg, #ed3b91, #d6257a)',
               }}
             >
               <svg
@@ -470,7 +470,7 @@ export default function AdminCategoryManagement() {
             </p>
             <button
               onClick={openAddSection}
-              className="text-sm font-semibold text-indigo-600 hover:text-indigo-800"
+              className="text-sm font-semibold text-primary-500 hover:text-primary-700"
             >
               Create your first section
             </button>
@@ -485,7 +485,7 @@ export default function AdminCategoryManagement() {
                 {/* Section header */}
                 <div className="px-6 py-5 border-b border-slate-100/80 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-500">
+                    <div className="w-9 h-9 rounded-lg bg-primary-50 flex items-center justify-center text-primary-500">
                       <svg
                         className="w-5 h-5"
                         fill="none"
@@ -556,7 +556,7 @@ export default function AdminCategoryManagement() {
                 <div>
                   {sec.articlesLoading ? (
                     <div className="px-6 py-8 text-center">
-                      <div className="w-5 h-5 border-2 border-slate-200 border-t-indigo-500 rounded-full animate-spin mx-auto" />
+                      <div className="w-5 h-5 border-2 border-slate-200 border-t-primary-500 rounded-full animate-spin mx-auto" />
                     </div>
                   ) : sec.articles.length === 0 ? (
                     <div className="px-6 py-8 text-center text-sm text-slate-400">
@@ -650,7 +650,7 @@ export default function AdminCategoryManagement() {
                   <div className="px-6 py-3 border-t border-slate-100/60">
                     <Link
                       to={`/admin/help-center/articles/new?categoryId=${categoryId}&sectionId=${sec.id}&returnTo=${returnTo}`}
-                      className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-500 hover:text-indigo-700 transition-colors"
+                      className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-500 hover:text-primary-700 transition-colors"
                     >
                       <svg
                         className="w-4 h-4"
@@ -718,7 +718,7 @@ export default function AdminCategoryManagement() {
                   </label>
                   <input
                     type="text"
-                    className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all"
+                    className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all"
                     placeholder="Getting Started"
                     value={sectionForm.title}
                     onChange={(e) =>
@@ -732,7 +732,7 @@ export default function AdminCategoryManagement() {
                   </label>
                   <input
                     type="text"
-                    className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all"
+                    className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all"
                     placeholder="البدء"
                     dir="rtl"
                     value={sectionForm.title_ar}
@@ -752,7 +752,7 @@ export default function AdminCategoryManagement() {
                 </label>
                 <input
                   type="text"
-                  className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all font-mono"
+                  className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all font-mono"
                   placeholder="getting-started (auto-generated)"
                   value={sectionForm.slug}
                   onChange={(e) =>
@@ -768,7 +768,7 @@ export default function AdminCategoryManagement() {
                   </label>
                   <textarea
                     rows={2}
-                    className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all resize-none"
+                    className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all resize-none"
                     placeholder="Brief description..."
                     value={sectionForm.description}
                     onChange={(e) =>
@@ -785,7 +785,7 @@ export default function AdminCategoryManagement() {
                   </label>
                   <textarea
                     rows={2}
-                    className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all resize-none"
+                    className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all resize-none"
                     placeholder="وصف موجز..."
                     dir="rtl"
                     value={sectionForm.description_ar}
@@ -806,7 +806,7 @@ export default function AdminCategoryManagement() {
                   </label>
                   <input
                     type="number"
-                    className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all"
+                    className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all"
                     value={sectionForm.sort_order}
                     onChange={(e) =>
                       setSectionForm({
@@ -820,7 +820,7 @@ export default function AdminCategoryManagement() {
                   <label className="flex items-center gap-3 cursor-pointer">
                     <input
                       type="checkbox"
-                      className="w-5 h-5 rounded border-slate-300 text-indigo-500 focus:ring-indigo-400 focus:ring-offset-0 transition-all"
+                      className="w-5 h-5 rounded border-slate-300 text-primary-500 focus:ring-primary-400 focus:ring-offset-0 transition-all"
                       checked={sectionForm.is_published}
                       onChange={(e) =>
                         setSectionForm({
@@ -852,7 +852,7 @@ export default function AdminCategoryManagement() {
                 disabled={sectionSaving}
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-sm font-semibold transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
                 style={{
-                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                  background: 'linear-gradient(135deg, #ed3b91, #d6257a)',
                 }}
               >
                 {sectionSaving

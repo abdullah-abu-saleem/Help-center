@@ -164,7 +164,7 @@ export default function AdminSectionListAll() {
           </Link>
           <Link
             to="/admin/help-center/sections"
-            className="px-5 py-2 text-sm font-semibold bg-indigo-600 text-white rounded-lg shadow-sm"
+            className="px-5 py-2 text-sm font-semibold bg-[#ed3b91] text-white rounded-lg shadow-sm"
           >
             Sections
           </Link>
@@ -187,7 +187,7 @@ export default function AdminSectionListAll() {
           <Link
             to="/admin/help-center/sections/new"
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-sm font-semibold transition-all hover:scale-[1.02] active:scale-[0.98]"
-            style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
+            style={{ background: 'linear-gradient(135deg, #ed3b91, #d6257a)' }}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -217,7 +217,7 @@ export default function AdminSectionListAll() {
                 onClick={() => setStatusFilter(f)}
                 className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                   statusFilter === f
-                    ? 'bg-indigo-100 text-indigo-700'
+                    ? 'bg-primary-100 text-primary-700'
                     : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
                 }`}
               >
@@ -228,7 +228,7 @@ export default function AdminSectionListAll() {
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
-            className="px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all bg-white"
+            className="px-3 py-2 text-sm rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all bg-white"
           >
             <option value="all">All Categories</option>
             {categories.map((c) => (
@@ -246,7 +246,7 @@ export default function AdminSectionListAll() {
 
         {loading ? (
           <div className="text-center py-20">
-            <div className="w-8 h-8 border-2 border-slate-200 border-t-indigo-500 rounded-full animate-spin mx-auto mb-4" />
+            <div className="w-8 h-8 border-2 border-slate-200 border-t-primary-500 rounded-full animate-spin mx-auto mb-4" />
             <p className="text-sm text-slate-500">Loading sections...</p>
           </div>
         ) : filtered.length === 0 ? (
@@ -264,7 +264,7 @@ export default function AdminSectionListAll() {
             {!search && statusFilter === 'all' && categoryFilter === 'all' && (
               <Link
                 to="/admin/help-center/sections/new"
-                className="text-sm font-semibold text-indigo-600 hover:text-indigo-800"
+                className="text-sm font-semibold text-primary-500 hover:text-primary-800"
               >
                 Create the first section
               </Link>
@@ -277,13 +277,13 @@ export default function AdminSectionListAll() {
                 key={section.id}
                 className="glass-card rounded-2xl p-5 flex items-center justify-between hover:shadow-lg transition-all relative overflow-hidden"
               >
-                <div className="admin-card-accent" style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }} />
+                <div className="admin-card-accent" style={{ background: 'linear-gradient(135deg, #ed3b91, #d6257a)' }} />
                 <div className="flex items-center gap-4 flex-1 min-w-0">
                   <div
                     className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                    style={{ background: 'rgba(99, 102, 241, 0.08)' }}
+                    style={{ background: 'rgba(237, 59, 145, 0.08)' }}
                   >
-                    <svg className="w-5 h-5" style={{ color: '#6366f1' }} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <svg className="w-5 h-5" style={{ color: '#ed3b91' }} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" />
                     </svg>
                   </div>
@@ -298,7 +298,7 @@ export default function AdminSectionListAll() {
                     </div>
                     <p className="text-xs text-slate-400 mt-0.5 truncate">
                       {section.hc_categories?.title && (
-                        <span className="text-indigo-500">{section.hc_categories.title}</span>
+                        <span className="text-primary-500">{section.hc_categories.title}</span>
                       )}
                       {section.hc_categories?.title && ' · '}
                       /{section.slug}
@@ -324,7 +324,7 @@ export default function AdminSectionListAll() {
                   )}
                   <Link
                     to={`/admin/help-center/articles?section=${section.id}`}
-                    className="px-3 py-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
+                    className="px-3 py-1.5 text-xs font-medium text-primary-500 bg-primary-50 rounded-lg hover:bg-primary-100 transition-colors"
                   >
                     Articles
                   </Link>

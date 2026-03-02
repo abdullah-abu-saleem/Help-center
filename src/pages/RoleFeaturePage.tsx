@@ -7,6 +7,7 @@ import { FEATURE_CATEGORIES, articles as staticArticles, sections as staticSecti
 import {
   getHcCategoryBySlug,
   getHcSectionBySlugs,
+  getHcSectionBySlugOnly,
   getHcGroupsBySection,
   getHcArticlesByGroup,
   getHcArticlesBySection,
@@ -23,10 +24,12 @@ const ROLE_DISPLAY_CATEGORY_SLUG: Record<string, string> = {
   student: 'for-students',
 };
 
-/* Map role param → category slug where the sections actually live */
-const ROLE_CONTENT_CATEGORY_SLUG: Record<string, string> = {
-  teacher: 'for-schools-and-districts',
-  student: 'for-students',
+/* Map role param → ordered list of category slugs to try when resolving a section.
+ * First match wins. Teacher features live under both for-teachers (own sections)
+ * and for-schools-and-districts (shared school/district sections). */
+const ROLE_CONTENT_CATEGORY_SLUGS: Record<string, string[]> = {
+  teacher: ['for-teachers', 'for-schools-and-districts'],
+  student: ['for-students'],
 };
 
 export default function RoleFeaturePage() {
@@ -69,15 +72,30 @@ export default function RoleFeaturePage() {
     (async () => {
       try {
         const displayCatSlug = ROLE_DISPLAY_CATEGORY_SLUG[role];
-        const contentCatSlug = ROLE_CONTENT_CATEGORY_SLUG[role];
-        if (!displayCatSlug || !contentCatSlug) { setLoaded(true); return; }
+        const contentCatSlugs = ROLE_CONTENT_CATEGORY_SLUGS[role];
+        if (!displayCatSlug || !contentCatSlugs?.length) { setLoaded(true); return; }
 
-        // Fetch display category (for breadcrumbs) and content section in parallel
-        const [cat, sec] = await Promise.all([
-          getHcCategoryBySlug(displayCatSlug),
-          getHcSectionBySlugs(contentCatSlug, featureSlug),
-        ]);
+        // Fetch display category (for breadcrumbs)
+        console.log('[RoleFeaturePage] fetching — role:', role, 'featureSlug:', featureSlug, 'displayCat:', displayCatSlug, 'contentCats:', contentCatSlugs);
+        let cat = await getHcCategoryBySlug(displayCatSlug);
+
+        // Try each content category in order until section is found
+        let sec: Awaited<ReturnType<typeof getHcSectionBySlugs>> = null;
+        for (const catSlug of contentCatSlugs) {
+          sec = await getHcSectionBySlugs(catSlug, featureSlug);
+          if (sec) {
+            console.log('[RoleFeaturePage] section found under category:', catSlug, '→ id:', sec.id, 'slug:', sec.slug);
+            break;
+          }
+          console.log('[RoleFeaturePage] section NOT found under:', catSlug, '— trying next...');
+        }
+        // Last resort: slug-only lookup (no category constraint)
+        if (!sec && featureSlug) {
+          console.warn('[RoleFeaturePage] all category lookups failed, trying slug-only for:', featureSlug);
+          sec = await getHcSectionBySlugOnly(featureSlug);
+        }
         if (cancelled) return;
+        console.log('[RoleFeaturePage] final section result:', sec ? `id=${sec.id} slug=${sec.slug}` : 'NOT FOUND');
 
         // Category: Supabase first, then static fallback
         if (cat) {
@@ -97,7 +115,7 @@ export default function RoleFeaturePage() {
           console.log('[RoleFeaturePage] resolved IDs — category_id:', contentCatId, 'section.id:', sec.id, 'section.slug:', sec.slug);
           const [grps, secArts] = await Promise.all([
             getHcGroupsBySection(sec.id),
-            getHcArticlesBySection(sec.id, contentCatId),
+            getHcArticlesBySection(sec.id),
           ]);
           if (cancelled) return;
           console.log('[RoleFeaturePage] articles.length:', secArts.length, 'groups.length:', grps.length);
@@ -163,7 +181,7 @@ export default function RoleFeaturePage() {
     return (
       <Layout>
         <div className="flex items-center justify-center py-20">
-          <div className="w-8 h-8 border-2 border-slate-200 border-t-[#6366f1] rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-slate-200 border-t-[#ed3b91] rounded-full animate-spin" />
         </div>
       </Layout>
     );

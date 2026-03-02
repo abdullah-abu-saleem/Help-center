@@ -3,6 +3,7 @@ import { ResourcesGridView } from '../components/resources/ResourcesGridView';
 import { useI18n } from '../lib/i18n';
 import { getHcResourceVideos, type HcResourceVideo } from '../lib/helpCenterApi';
 import type { ResourceVideo } from '../data/resourceVideos';
+import { COLORS } from '../theme/colors';
 
 export default function StudentResourcesAllPage() {
   const { lang, localize } = useI18n();
@@ -51,7 +52,7 @@ export default function StudentResourcesAllPage() {
     return (
       <ResourcesGridView
         videos={[]}
-        accentColor="#08B8FB"
+        accentColor={COLORS.secondary}
         backTo="/help/resources/students"
         backLabel={lang === 'ar' ? 'العودة' : 'Back'}
         title={lang === 'ar' ? <>جميع دروس <span className="gradient-text">الطلاب</span></> : <>All <span className="gradient-text">Student</span> Tutorials</>}
@@ -64,7 +65,7 @@ export default function StudentResourcesAllPage() {
   return (
     <ResourcesGridView
       videos={videos}
-      accentColor="#08B8FB"
+      accentColor={COLORS.secondary}
       backTo="/help/resources/students"
       backLabel={lang === 'ar' ? 'العودة' : 'Back'}
       title={lang === 'ar' ? <>جميع دروس <span className="gradient-text">الطلاب</span></> : <>All <span className="gradient-text">Student</span> Tutorials</>}

@@ -17,11 +17,11 @@ export const ArticleGroup: React.FC<ArticleGroupProps> = ({ id, group, articles 
   return (
     <section id={id} className="scroll-mt-32">
       {/* Group title */}
-      <h2 className="text-xl font-bold text-slate-900 tracking-tight mb-1">
+      <h2 className="text-xl font-bold text-[#091e42] tracking-tight mb-1">
         {localize(group, 'title')}
       </h2>
       {localize(group, 'description') && (
-        <p className="text-sm text-slate-400 mb-4">{localize(group, 'description')}</p>
+        <p className="text-sm text-[#6882a9] mb-4">{localize(group, 'description')}</p>
       )}
 
       {/* Pure link list — no card, no container */}

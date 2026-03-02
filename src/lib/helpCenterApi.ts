@@ -202,26 +202,55 @@ export async function getHcSectionBySlug(
   return (data as HcSectionWithCategory) || null;
 }
 
-/** Fetch published articles for a given section (public).
- *  Optionally also filter by category_id for extra specificity. */
-export async function getHcArticlesBySection(sectionId: string, categoryId?: string): Promise<HcArticle[]> {
-  console.log('[helpCenterApi] getHcArticlesBySection — sectionId:', sectionId, 'categoryId:', categoryId ?? '(none)');
-  let query = supabasePublic
+/** Fetch published articles for a given section (public). */
+export async function getHcArticlesBySection(sectionId: string): Promise<HcArticle[]> {
+  console.log('[helpCenterApi] getHcArticlesBySection — sectionId:', sectionId);
+  const { data, error } = await supabasePublic
     .from('hc_articles')
     .select('*')
     .eq('section_id', sectionId)
-    .eq('is_published', true);
-
-  if (categoryId) {
-    query = query.eq('category_id', categoryId);
-  }
-
-  const { data, error } = await query
+    .eq('is_published', true)
     .order('sort_order', { ascending: true })
-    .order('created_at', { ascending: true });
+    .order('updated_at', { ascending: false });
 
   if (error) { console.error('[helpCenterApi] getHcArticlesBySection error:', error); throw error; }
   console.log('[helpCenterApi] getHcArticlesBySection returned', data?.length, 'rows');
+  return data || [];
+}
+
+/** Fetch published articles by section slug (public).
+ *  Resolves the section from its slug first, then fetches articles. */
+export async function getHcArticlesBySectionSlug(sectionSlug: string): Promise<HcArticle[]> {
+  console.log('[helpCenterApi] getHcArticlesBySectionSlug — slug:', sectionSlug);
+
+  // 1. Resolve section id from slug
+  const { data: sec, error: secErr } = await supabasePublic
+    .from('hc_sections')
+    .select('id')
+    .eq('slug', sectionSlug)
+    .eq('is_published', true)
+    .single();
+
+  if (secErr && secErr.code !== 'PGRST116') {
+    console.error('[helpCenterApi] getHcArticlesBySectionSlug section lookup error:', secErr);
+    throw secErr;
+  }
+  if (!sec) {
+    console.warn('[helpCenterApi] getHcArticlesBySectionSlug — section not found for slug:', sectionSlug);
+    return [];
+  }
+
+  // 2. Fetch articles for that section
+  const { data, error } = await supabasePublic
+    .from('hc_articles')
+    .select('*')
+    .eq('section_id', sec.id)
+    .eq('is_published', true)
+    .order('sort_order', { ascending: true })
+    .order('updated_at', { ascending: false });
+
+  if (error) { console.error('[helpCenterApi] getHcArticlesBySectionSlug error:', error); throw error; }
+  console.log('[helpCenterApi] getHcArticlesBySectionSlug returned', data?.length, 'rows');
   return data || [];
 }
 
@@ -447,6 +476,28 @@ export async function getHcSectionBySlugs(
     .single();
 
   if (error && error.code !== 'PGRST116') throw error;
+  return data || null;
+}
+
+/** Fallback: fetch a published section by slug only (no category constraint).
+ *  Used when the category-scoped lookup fails due to slug/category mismatch. */
+export async function getHcSectionBySlugOnly(
+  sectionSlug: string,
+): Promise<(HcSection & { hc_categories: Pick<HcCategory, 'id' | 'slug' | 'title' | 'title_ar'> | null }) | null> {
+  console.log('[helpCenterApi] getHcSectionBySlugOnly — slug:', sectionSlug);
+  const { data, error } = await supabasePublic
+    .from('hc_sections')
+    .select('*, hc_categories(id, slug, title, title_ar)')
+    .eq('slug', sectionSlug)
+    .eq('is_published', true)
+    .limit(1)
+    .maybeSingle();
+
+  if (error && error.code !== 'PGRST116') {
+    console.error('[helpCenterApi] getHcSectionBySlugOnly error:', error);
+    throw error;
+  }
+  console.log('[helpCenterApi] getHcSectionBySlugOnly result:', data ? `${data.slug} (section_id=${data.id})` : 'null');
   return data || null;
 }
 

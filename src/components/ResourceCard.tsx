@@ -1,5 +1,7 @@
 import React from 'react';
 import type { Resource, ResourceActionType } from '../resourcesData';
+import { SpotlightCard } from './ui/SpotlightCard';
+import { COLORS } from '../theme/colors';
 
 const actionLabels: Record<ResourceActionType, string> = {
   watch: 'Watch',
@@ -31,68 +33,62 @@ interface ResourceCardProps {
 
 export const ResourceCard: React.FC<ResourceCardProps> = ({ resource }) => {
   return (
-    <a
-      href={resource.link}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="group flex flex-col bg-white rounded-2xl overflow-hidden transition-all duration-250 focus:outline-none focus:ring-2 focus:ring-[#08B8FB] focus:ring-offset-2"
-      style={{
-        boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04)',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = 'translateY(-4px)';
-        e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04)';
-      }}
-    >
-      {/* Thumbnail */}
-      <div className="relative w-full overflow-hidden" style={{ aspectRatio: '16 / 10' }}>
-        <img
-          src={resource.thumbnail}
-          alt={resource.title}
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-          loading="lazy"
-        />
-        {/* Type badge */}
-        <div
-          className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold text-white backdrop-blur-sm"
-          style={{ background: 'rgba(0,0,0,0.5)' }}
-        >
-          {actionIcons[resource.type]}
-          <span className="capitalize">{actionLabels[resource.type]}</span>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="flex flex-col flex-1 p-5">
-        <h3 className="text-base font-bold text-slate-900 mb-1.5 leading-snug group-hover:text-[#ED3B91] transition-colors duration-200">
-          {resource.title}
-        </h3>
-        <p className="text-sm text-slate-500 leading-relaxed mb-4 flex-1">
-          {resource.description}
-        </p>
-
-        {/* Action button */}
-        <div
-          className="inline-flex items-center gap-2 text-sm font-semibold transition-colors duration-200"
-          style={{ color: '#ED3B91' }}
-        >
-          {actionIcons[resource.type]}
-          <span>{actionLabels[resource.type]}</span>
-          <svg
-            className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2.5}
-            viewBox="0 0 24 24"
+    <SpotlightCard className="hover:shadow-xl hover:-translate-y-1">
+      <a
+        href={resource.link}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="group flex flex-col h-full focus:outline-none"
+      >
+        {/* Thumbnail */}
+        <div className="relative w-full overflow-hidden" style={{ aspectRatio: '16 / 10' }}>
+          <img
+            src={resource.thumbnail}
+            alt={resource.title}
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            loading="lazy"
+          />
+          {/* Type badge */}
+          <div
+            className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold text-white backdrop-blur-sm"
+            style={{ background: 'rgba(0,0,0,0.5)' }}
           >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-          </svg>
+            {actionIcons[resource.type]}
+            <span className="capitalize">{actionLabels[resource.type]}</span>
+          </div>
         </div>
-      </div>
-    </a>
+
+        {/* Content */}
+        <div className="flex flex-col flex-1 p-5">
+          <h3
+            className="text-base font-bold mb-1.5 leading-snug transition-colors duration-200"
+            style={{ color: COLORS.neutral }}
+          >
+            <span className="group-hover:text-[#ed3b91]">{resource.title}</span>
+          </h3>
+          <p style={{ color: COLORS.neutralLight }} className="text-sm leading-relaxed mb-4 flex-1">
+            {resource.description}
+          </p>
+
+          {/* Action button */}
+          <div
+            className="inline-flex items-center gap-2 text-sm font-semibold transition-colors duration-200"
+            style={{ color: COLORS.primary }}
+          >
+            {actionIcons[resource.type]}
+            <span>{actionLabels[resource.type]}</span>
+            <svg
+              className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2.5}
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+            </svg>
+          </div>
+        </div>
+      </a>
+    </SpotlightCard>
   );
 };

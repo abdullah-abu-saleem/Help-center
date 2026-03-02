@@ -2,6 +2,7 @@ import React from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { I18nProvider } from './lib/i18n';
 import { AuthProvider } from './lib/auth';
+import { GlobalBackground } from './components/theme/GlobalBackground';
 
 import Home from './pages/Home';
 import CategoryPage from './pages/Category';
@@ -21,8 +22,6 @@ import BlogPostDetail from './pages/BlogPostDetail';
 import BlogEditor from './pages/BlogEditor';
 import TeacherDashboard from './pages/TeacherDashboard';
 import Login from './pages/Login';
-import ForgotPassword from './pages/ForgotPassword';
-import Register from './pages/Register';
 import AccountSettings from './pages/AccountSettings';
 import { PrivateRoute } from './components/PrivateRoute';
 import { RoleRoute } from './components/RoleRoute';
@@ -56,6 +55,10 @@ function App() {
     <I18nProvider>
       <AuthProvider>
       <HashRouter>
+        {/* Global background — grid + dots + noise on every route */}
+        <GlobalBackground />
+
+        <div className="relative z-10">
         <Routes>
           {/* Root → Resources landing page */}
           <Route path="/" element={<ResourcesLanding />} />
@@ -90,8 +93,8 @@ function App() {
 
           {/* Authentication routes */}
           <Route path="/login" element={<Login />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<Navigate to="/login" replace />} />
+          <Route path="/register" element={<Navigate to="/login" replace />} />
 
           {/* Account Settings - Protected Route */}
           <Route path="/account" element={<PrivateRoute><AccountSettings /></PrivateRoute>} />
@@ -156,6 +159,7 @@ function App() {
           {/* Fallback — render NotFound directly (no redirect to /404) */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </div>
 
       </HashRouter>
       </AuthProvider>

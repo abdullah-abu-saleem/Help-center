@@ -17,7 +17,9 @@ interface TutorialCardProps {
   customThumbnail?: string;
 }
 
-const PLAY_BTN = '#EC4899';
+import { COLORS } from '../../theme/colors';
+
+const PLAY_BTN = COLORS.primary;
 
 export const TutorialCard: React.FC<TutorialCardProps> = ({
   video,
@@ -151,7 +153,7 @@ export const TutorialCard: React.FC<TutorialCardProps> = ({
         <div style={{ flex: 1, minWidth: 0, direction: isRTL ? 'rtl' : 'ltr', textAlign: isRTL ? 'right' : 'left' }}>
           <h3 style={{
             fontSize: 17, fontWeight: 700,
-            color: '#0f172a',
+            color: COLORS.neutral,
             lineHeight: 1.35, marginBottom: 5,
             overflow: 'hidden', textOverflow: 'ellipsis',
             display: '-webkit-box',
@@ -162,7 +164,7 @@ export const TutorialCard: React.FC<TutorialCardProps> = ({
           </h3>
           {video.description && (
             <p style={{
-              fontSize: 13, color: '#64748b',
+              fontSize: 13, color: COLORS.neutralLight,
               lineHeight: 1.55, margin: 0,
               overflow: 'hidden', textOverflow: 'ellipsis',
               display: '-webkit-box',
@@ -180,7 +182,7 @@ export const TutorialCard: React.FC<TutorialCardProps> = ({
           background: PLAY_BTN,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           flexShrink: 0, marginTop: 2,
-          boxShadow: '0 4px 14px rgba(236,72,153,0.30)',
+          boxShadow: '0 4px 14px rgba(237,59,145,0.30)',
         }}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff" style={{ marginLeft: 2 }}>
             <path d="M8 5v14l11-7z" />

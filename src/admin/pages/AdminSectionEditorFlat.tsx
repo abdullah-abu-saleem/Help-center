@@ -130,7 +130,7 @@ export default function AdminSectionEditorFlat() {
     return (
       <div className="min-h-screen flex items-center justify-center glass-bg">
         <div className="text-center">
-          <div className="w-8 h-8 border-2 border-slate-200 border-t-indigo-500 rounded-full animate-spin mx-auto mb-4" />
+          <div className="w-8 h-8 border-2 border-slate-200 border-t-primary-500 rounded-full animate-spin mx-auto mb-4" />
           <p className="text-sm text-slate-500">Loading...</p>
         </div>
       </div>
@@ -186,7 +186,7 @@ export default function AdminSectionEditorFlat() {
         <div className="space-y-6">
           {/* Section Details Card */}
           <div className="glass-card rounded-2xl p-8 space-y-6 relative overflow-hidden">
-            <div className="admin-card-accent" style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }} />
+            <div className="admin-card-accent" style={{ background: 'linear-gradient(135deg, #ed3b91, #d6257a)' }} />
             <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Section Details</h2>
 
             {/* Category selector */}
@@ -194,7 +194,7 @@ export default function AdminSectionEditorFlat() {
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Category *</label>
                 <select
-                  className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all bg-white"
+                  className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all bg-white"
                   value={form.category_id}
                   onChange={(e) => setForm({ ...form, category_id: e.target.value })}
                 >
@@ -218,7 +218,7 @@ export default function AdminSectionEditorFlat() {
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Title (English) *</label>
                 <input
                   type="text"
-                  className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all"
+                  className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all"
                   placeholder="Getting Started"
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
@@ -229,7 +229,7 @@ export default function AdminSectionEditorFlat() {
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Title (Arabic)</label>
                 <input
                   type="text"
-                  className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all"
+                  className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all"
                   placeholder="البدء"
                   dir="rtl"
                   value={form.title_ar}
@@ -243,7 +243,7 @@ export default function AdminSectionEditorFlat() {
               <label className="block text-sm font-medium text-slate-700 mb-1.5">Slug</label>
               <input
                 type="text"
-                className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all font-mono"
+                className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all font-mono"
                 placeholder="getting-started"
                 value={form.slug}
                 onChange={(e) => setForm({ ...form, slug: e.target.value })}
@@ -257,7 +257,7 @@ export default function AdminSectionEditorFlat() {
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Description (English)</label>
                 <textarea
                   rows={3}
-                  className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all resize-none"
+                  className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all resize-none"
                   placeholder="A brief description of this section..."
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
@@ -267,7 +267,7 @@ export default function AdminSectionEditorFlat() {
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Description (Arabic)</label>
                 <textarea
                   rows={3}
-                  className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all resize-none"
+                  className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all resize-none"
                   placeholder="وصف موجز لهذا القسم..."
                   dir="rtl"
                   value={form.description_ar}
@@ -281,7 +281,7 @@ export default function AdminSectionEditorFlat() {
               <label className="block text-sm font-medium text-slate-700 mb-1.5">Icon</label>
               <input
                 type="text"
-                className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all"
+                className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all"
                 placeholder="folder, rocket, shield, book..."
                 value={form.icon}
                 onChange={(e) => setForm({ ...form, icon: e.target.value })}
@@ -295,7 +295,7 @@ export default function AdminSectionEditorFlat() {
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Sort Order</label>
                 <input
                   type="number"
-                  className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all"
+                  className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all"
                   value={form.sort_order}
                   onChange={(e) => setForm({ ...form, sort_order: parseInt(e.target.value) || 0 })}
                 />
@@ -304,7 +304,7 @@ export default function AdminSectionEditorFlat() {
                 <label className="flex items-center gap-3 cursor-pointer">
                   <input
                     type="checkbox"
-                    className="w-5 h-5 rounded border-slate-300 text-indigo-500 focus:ring-indigo-400 focus:ring-offset-0 transition-all"
+                    className="w-5 h-5 rounded border-slate-300 text-primary-500 focus:ring-primary-400 focus:ring-offset-0 transition-all"
                     checked={form.is_published}
                     onChange={(e) => setForm({ ...form, is_published: e.target.checked })}
                   />
@@ -326,7 +326,7 @@ export default function AdminSectionEditorFlat() {
               onClick={handleSave}
               disabled={saving}
               className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-white text-sm font-semibold transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
-              style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
+              style={{ background: 'linear-gradient(135deg, #ed3b91, #d6257a)' }}
             >
               {saving ? 'Saving...' : isNew ? 'Create Section' : 'Save Changes'}
             </button>

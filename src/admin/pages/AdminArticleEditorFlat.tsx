@@ -240,7 +240,7 @@ export default function AdminArticleEditorFlat() {
     return (
       <div className="min-h-screen flex items-center justify-center glass-bg">
         <div className="text-center">
-          <div className="w-8 h-8 border-2 border-slate-200 border-t-indigo-500 rounded-full animate-spin mx-auto mb-4" />
+          <div className="w-8 h-8 border-2 border-slate-200 border-t-primary-500 rounded-full animate-spin mx-auto mb-4" />
           <p className="text-sm text-slate-500">Loading...</p>
         </div>
       </div>
@@ -296,7 +296,7 @@ export default function AdminArticleEditorFlat() {
         <div className="space-y-6">
           {/* Basic Info Card */}
           <div className="glass-card rounded-2xl p-8 space-y-6 relative overflow-hidden">
-            <div className="admin-card-accent" style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }} />
+            <div className="admin-card-accent" style={{ background: 'linear-gradient(135deg, #ed3b91, #d6257a)' }} />
             <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Basic Info</h2>
 
             {/* Cascading Category → Section selectors */}
@@ -304,7 +304,7 @@ export default function AdminArticleEditorFlat() {
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Category *</label>
                 <select
-                  className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all bg-white"
+                  className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all bg-white"
                   value={selectedCategoryId}
                   onChange={(e) => handleCategoryChange(e.target.value)}
                 >
@@ -317,7 +317,7 @@ export default function AdminArticleEditorFlat() {
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Section *</label>
                 <select
-                  className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all bg-white disabled:opacity-50"
+                  className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all bg-white disabled:opacity-50"
                   value={form.section_id}
                   onChange={(e) => handleSectionChange(e.target.value)}
                   disabled={!selectedCategoryId}
@@ -335,7 +335,7 @@ export default function AdminArticleEditorFlat() {
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Title (English) *</label>
                 <input
                   type="text"
-                  className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all"
+                  className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all"
                   placeholder="How to Reset Your Password"
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
@@ -346,7 +346,7 @@ export default function AdminArticleEditorFlat() {
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Title (Arabic)</label>
                 <input
                   type="text"
-                  className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all"
+                  className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all"
                   placeholder="كيفية إعادة تعيين كلمة المرور"
                   dir="rtl"
                   value={form.title_ar}
@@ -360,7 +360,7 @@ export default function AdminArticleEditorFlat() {
               <label className="block text-sm font-medium text-slate-700 mb-1.5">Slug</label>
               <input
                 type="text"
-                className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all font-mono"
+                className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all font-mono"
                 placeholder="how-to-reset-your-password"
                 value={form.slug}
                 onChange={(e) => setForm({ ...form, slug: e.target.value })}
@@ -374,7 +374,7 @@ export default function AdminArticleEditorFlat() {
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Summary (English)</label>
                 <textarea
                   rows={2}
-                  className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all resize-none"
+                  className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all resize-none"
                   placeholder="A short description of the article..."
                   value={form.summary}
                   onChange={(e) => setForm({ ...form, summary: e.target.value })}
@@ -384,7 +384,7 @@ export default function AdminArticleEditorFlat() {
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Summary (Arabic)</label>
                 <textarea
                   rows={2}
-                  className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all resize-none"
+                  className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all resize-none"
                   placeholder="وصف موجز للمقال..."
                   dir="rtl"
                   value={form.summary_ar}
@@ -399,7 +399,7 @@ export default function AdminArticleEditorFlat() {
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Sort Order</label>
                 <input
                   type="number"
-                  className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all"
+                  className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all"
                   value={form.sort_order}
                   onChange={(e) => setForm({ ...form, sort_order: parseInt(e.target.value) || 0 })}
                 />
@@ -408,7 +408,7 @@ export default function AdminArticleEditorFlat() {
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Tags</label>
                 <input
                   type="text"
-                  className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all"
+                  className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all"
                   placeholder="password, reset, account"
                   value={form.tags}
                   onChange={(e) => setForm({ ...form, tags: e.target.value })}
@@ -419,14 +419,14 @@ export default function AdminArticleEditorFlat() {
 
           {/* Body Card */}
           <div className="glass-card rounded-2xl p-8 space-y-6 relative overflow-hidden">
-            <div className="admin-card-accent" style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }} />
+            <div className="admin-card-accent" style={{ background: 'linear-gradient(135deg, #ed3b91, #d6257a)' }} />
             <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Content (Markdown)</h2>
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">Body (English)</label>
               <textarea
                 rows={16}
-                className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all resize-y font-mono"
+                className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all resize-y font-mono"
                 placeholder="# How to Reset Your Password&#10;&#10;Follow these steps to reset..."
                 value={form.body_markdown}
                 onChange={(e) => setForm({ ...form, body_markdown: e.target.value })}
@@ -437,7 +437,7 @@ export default function AdminArticleEditorFlat() {
               <label className="block text-sm font-medium text-slate-700 mb-1.5">Body (Arabic)</label>
               <textarea
                 rows={10}
-                className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all resize-y font-mono"
+                className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all resize-y font-mono"
                 placeholder="# كيفية إعادة تعيين كلمة المرور"
                 dir="rtl"
                 value={form.body_markdown_ar}
@@ -508,7 +508,7 @@ export default function AdminArticleEditorFlat() {
                 onClick={() => handleSave(true)}
                 disabled={saving}
                 className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-white text-sm font-semibold transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
-                style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
+                style={{ background: 'linear-gradient(135deg, #ed3b91, #d6257a)' }}
               >
                 {saving ? 'Saving...' : isNew ? 'Create & Publish' : 'Save & Publish'}
               </button>

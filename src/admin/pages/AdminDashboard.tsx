@@ -84,12 +84,12 @@ export default function AdminDashboard() {
       <section className="relative w-full overflow-hidden hero-mesh">
         <div
           className="aurora-orb aurora-orb-1"
-          style={{ width: 400, height: 400, top: '-10%', left: '-5%', background: 'rgba(99,102,241,0.2)' }}
+          style={{ width: 400, height: 400, top: '-10%', left: '-5%', background: 'rgba(237,59,145,0.2)' }}
           aria-hidden="true"
         />
         <div
           className="aurora-orb aurora-orb-2"
-          style={{ width: 350, height: 350, top: '10%', right: '-8%', background: 'rgba(139,92,246,0.18)' }}
+          style={{ width: 350, height: 350, top: '10%', right: '-8%', background: 'rgba(237,59,145,0.18)' }}
           aria-hidden="true"
         />
 

@@ -51,7 +51,7 @@ export default function TutorialsPage() {
         data-tour="tutorials-header"
         className="w-full"
         style={{
-          background: 'linear-gradient(135deg, #f5f3ff 0%, #ede9fe 50%, #f0f9ff 100%)',
+          background: 'linear-gradient(135deg, #fdf2f8 0%, #fce7f3 50%, #f0f9ff 100%)',
           borderBottom: '1px solid #f1f5f9',
         }}
       >
@@ -71,7 +71,7 @@ export default function TutorialsPage() {
             {/* Replay Tour button */}
             <button
               onClick={tour.startTour}
-              className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-[#8b5cf6] transition-colors mt-1"
+              className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-[#d6257a] transition-colors mt-1"
               style={{ background: 'none', border: 'none', cursor: 'pointer' }}
               aria-label={t('tourReplay' as any)}
             >
@@ -88,7 +88,7 @@ export default function TutorialsPage() {
       <div className="mx-auto px-6 py-8" style={{ maxWidth: 1100 }}>
         {loading ? (
           <div className="text-center py-20">
-            <div className="w-8 h-8 border-2 border-slate-200 border-t-[#8b5cf6] rounded-full animate-spin mx-auto mb-4" />
+            <div className="w-8 h-8 border-2 border-slate-200 border-t-[#d6257a] rounded-full animate-spin mx-auto mb-4" />
             <p className="text-sm text-slate-500">
               {lang === 'ar' ? 'جارٍ التحميل...' : 'Loading tutorials...'}
             </p>
@@ -134,7 +134,7 @@ export default function TutorialsPage() {
                       {/* Play button overlay */}
                       <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/20 transition-colors">
                         <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
-                          <svg className="w-5 h-5 text-[#8b5cf6] ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-5 h-5 text-[#d6257a] ml-0.5" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M8 5v14l11-7z" />
                           </svg>
                         </div>
@@ -146,7 +146,7 @@ export default function TutorialsPage() {
                     className="p-5"
                     {...(idx === 0 ? { 'data-tour': 'tutorials-card-info' } : {})}
                   >
-                    <h3 className="text-base font-bold text-slate-900 group-hover:text-[#8b5cf6] transition-colors mb-1.5 leading-snug">
+                    <h3 className="text-base font-bold text-slate-900 group-hover:text-[#d6257a] transition-colors mb-1.5 leading-snug">
                       {title}
                     </h3>
                     {description && (

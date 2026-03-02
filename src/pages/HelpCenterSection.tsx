@@ -6,7 +6,9 @@ import {
   getHcCategoryBySlug,
   getHcSectionsByCategory,
   getHcSectionBySlug,
+  getHcSectionBySlugOnly,
   getHcArticlesBySection,
+  getHcArticlesBySectionSlug,
   type HcCategory,
   type HcSectionWithCategory,
   type HcArticle,
@@ -25,11 +27,10 @@ export default function HelpCenterSection() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => { console.log('[HC_SECTION] mounted, slug:', categorySlug, '/', sectionSlug); }, []);
-
   const fetchData = useCallback(() => {
-    if (!categorySlug || !sectionSlug) { setLoading(false); return; }
+    if (!categorySlug || !sectionSlug) return;
     setLoading(true);
+    console.log('[HelpCenterSection] fetching — categorySlug:', categorySlug, 'sectionSlug:', sectionSlug);
     getHcCategoryBySlug(categorySlug)
       .then(async (cat) => {
         if (!cat) {
@@ -38,14 +39,21 @@ export default function HelpCenterSection() {
         }
         setCategory(cat);
 
-        const sec = await getHcSectionBySlug(cat.id, sectionSlug);
+        let sec = await getHcSectionBySlug(cat.id, sectionSlug);
+        // Fallback: if category-scoped lookup fails, try slug-only
+        if (!sec) {
+          console.warn('[HelpCenterSection] category-scoped lookup returned null, trying slug-only for:', sectionSlug);
+          sec = await getHcSectionBySlugOnly(sectionSlug) as any;
+        }
         if (!sec) {
           setError('Section not found.');
           return;
         }
+        console.log('[HelpCenterSection] section found — id:', sec.id, 'slug:', sec.slug);
         setSection(sec);
 
         const arts = await getHcArticlesBySection(sec.id);
+        console.log('[HelpCenterSection] articles loaded:', arts.length);
         setArticles(arts);
       })
       .catch((err) => setError(err.message))
@@ -75,7 +83,7 @@ export default function HelpCenterSection() {
           <p className="text-red-500 mb-4">{error || 'Section not found.'}</p>
           <Link
             to={categorySlug ? `/help-center/${categorySlug}` : '/help-center'}
-            className="text-sm text-indigo-600 hover:text-indigo-800"
+            className="text-sm text-primary-500 hover:text-primary-700"
           >
             Back
           </Link>
@@ -137,13 +145,13 @@ export default function HelpCenterSection() {
                 className="group block bg-white rounded-2xl border border-slate-100 p-6 hover:shadow-md hover:border-slate-200 transition-all"
               >
                 <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 flex-shrink-0 mt-0.5 group-hover:bg-indigo-50 group-hover:text-indigo-500 transition-colors">
+                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 flex-shrink-0 mt-0.5 group-hover:bg-primary-50 group-hover:text-primary-500 transition-colors">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
                     </svg>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-[15px] font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors mb-1">
+                    <h3 className="text-[15px] font-semibold text-slate-900 group-hover:text-primary-600 transition-colors mb-1">
                       {localized(article.title, article.title_ar)}
                     </h3>
                     {article.summary && (
@@ -165,7 +173,7 @@ export default function HelpCenterSection() {
                     )}
                   </div>
                   <svg
-                    className="w-5 h-5 text-slate-300 group-hover:text-indigo-400 transition-colors flex-shrink-0 mt-1"
+                    className="w-5 h-5 text-slate-300 group-hover:text-primary-400 transition-colors flex-shrink-0 mt-1"
                     fill="none"
                     stroke="currentColor"
                     strokeWidth={2}
@@ -183,7 +191,7 @@ export default function HelpCenterSection() {
         <div className="mt-8">
           <Link
             to={`/help-center/${category.slug}`}
-            className="inline-flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-800 transition-colors"
+            className="inline-flex items-center gap-2 text-sm text-primary-500 hover:text-primary-700 transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />

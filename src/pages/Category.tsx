@@ -13,6 +13,9 @@ import { warmUp, withRetry } from '../lib/supabaseRetry';
 import { FEATURE_CATEGORIES, ROLE_SLUG_MAP } from '../data';
 import { FeatureCard } from '../components/FeatureCard';
 import { useI18n } from '../lib/i18n';
+import { HelpCenterShell } from '../components/theme/HelpCenterShell';
+import { SpotlightCard } from '../components/ui/SpotlightCard';
+import { COLORS } from '../theme/colors';
 
 /* ── Heroicons outline (24×24, strokeWidth 1.5) mapped by section ID ── */
 const sectionIcons: Record<string, React.ReactNode> = {
@@ -268,7 +271,7 @@ export default function CategoryPage() {
     return (
       <Layout>
         <div className="flex flex-col items-center justify-center py-20">
-          <div className="w-8 h-8 border-2 border-slate-200 border-t-[#6366f1] rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-slate-200 border-t-[#ed3b91] rounded-full animate-spin" />
           {import.meta.env.DEV && (
             <div style={{ marginTop: 16, fontSize: 11, fontFamily: 'monospace', color: '#94a3b8', textAlign: 'center' }}>
               <div>CategoryPage | slug: {categorySlug ?? 'UNDEFINED'}</div>
@@ -305,19 +308,20 @@ export default function CategoryPage() {
 
   return (
     <Layout>
-      <div className="glass-bg"><div className="container mx-auto px-4 md:px-6 py-12 max-w-6xl">
+      <HelpCenterShell>
+      <div><div className="container mx-auto px-4 md:px-6 py-12 max-w-6xl">
         {/* 1) Top Breadcrumb Line */}
         <nav className="flex items-center text-sm text-slate-500 mb-8">
             <Link to="/help" className="hover:text-primary-600">{t('helpCenter')}</Link>
             <span className="mx-2 text-slate-300">{'>'}</span>
-            <span className="font-medium text-slate-900">{localize(category, 'title')}</span>
+            <span className="font-medium text-[#091e42]">{localize(category, 'title')}</span>
         </nav>
 
         {/* 2) Page Title */}
         <div className="text-center mb-16">
-            <h1 className="text-4xl font-bold text-slate-900 mb-3">{localize(category, 'title')}</h1>
+            <h1 className="text-4xl font-bold text-[#091e42] mb-3">{localize(category, 'title')}</h1>
             {/* 3) Small Subtitle */}
-            <p className="text-lg text-slate-500">{localize(category, 'description')}</p>
+            <p className="text-lg" style={{ color: COLORS.neutralLight }}>{localize(category, 'description')}</p>
         </div>
 
         {/* 4) Icon Grid – feature cards for role pages, section cards otherwise */}
@@ -336,14 +340,16 @@ export default function CategoryPage() {
                     <Link
                         key={section.id}
                         to={`/help/category/${category.slug}/section/${section.slug}`}
-                        className="group flex flex-col items-center p-7 glass-card text-center focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-2"
+                        className="group focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-2 rounded-xl"
                     >
-                        <div className="w-10 h-10 flex items-center justify-center rounded-lg bg-primary-50 text-primary-600 mb-4 group-hover:bg-primary-100 group-hover:scale-110 transition-all duration-200">
-                            {sectionIcons[section.id] || defaultIcon}
-                        </div>
-                        <h3 className="text-base font-semibold text-slate-900 group-hover:text-primary-600 transition-colors">
-                            {localize(section, 'title')}
-                        </h3>
+                        <SpotlightCard className="flex flex-col items-center p-7 text-center h-full">
+                            <div className="w-10 h-10 flex items-center justify-center rounded-lg bg-primary-50 text-primary-600 mb-4 group-hover:bg-primary-100 group-hover:scale-110 transition-all duration-200">
+                                {sectionIcons[section.id] || defaultIcon}
+                            </div>
+                            <h3 className="text-base font-semibold text-[#091e42] group-hover:text-[#ed3b91] transition-colors">
+                                {localize(section, 'title')}
+                            </h3>
+                        </SpotlightCard>
                     </Link>
                 ))
             )}
@@ -352,14 +358,15 @@ export default function CategoryPage() {
         {/* 5) Featured Articles Block */}
         {featuredArticles.length > 0 && (
             <div className="max-w-4xl mx-auto">
-                <h2 className="text-2xl font-bold text-slate-900 mb-8 text-center">{t('featuredArticles')}</h2>
+                <h2 className="text-2xl font-bold text-[#091e42] mb-8 text-center">{t('featuredArticles')}</h2>
                 <div className="grid gap-4">
                     {featuredArticles.map(article => (
                         <Link
                             key={article.id}
                             to={`/help/article/${article.slug}`}
-                            className="group block glass-card !rounded-xl p-6 text-start"
+                            className="group block text-start"
                         >
+                          <SpotlightCard className="p-6">
                             <div className="flex items-start gap-3">
                                 <div className="mt-1 text-yellow-500 flex-shrink-0">
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
@@ -367,18 +374,20 @@ export default function CategoryPage() {
                                     </svg>
                                 </div>
                                 <div>
-                                    <h3 className="text-lg font-semibold text-slate-900 group-hover:text-primary-600 mb-1">
+                                    <h3 className="text-lg font-semibold text-[#091e42] group-hover:text-[#ed3b91] mb-1">
                                         {localize(article, 'title')}
                                     </h3>
-                                    <p className="text-slate-600">{localize(article, 'summary')}</p>
+                                    <p style={{ color: COLORS.neutralLight }}>{localize(article, 'summary')}</p>
                                 </div>
                             </div>
+                          </SpotlightCard>
                         </Link>
                     ))}
                 </div>
             </div>
         )}
       </div></div>
+      </HelpCenterShell>
     </Layout>
   );
 }

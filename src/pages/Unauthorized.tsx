@@ -77,8 +77,8 @@ export default function Unauthorized() {
               to="/help"
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all duration-200"
               style={{
-                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                boxShadow: '0 2px 8px rgba(99,102,241,0.3)',
+                background: 'linear-gradient(135deg, #ed3b91, #d6257a)',
+                boxShadow: '0 2px 8px rgba(237,59,145,0.3)',
               }}
             >
               Go Home
@@ -88,9 +88,9 @@ export default function Unauthorized() {
                 to="/login"
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200"
                 style={{
-                  color: '#6366f1',
-                  background: 'rgba(99,102,241,0.08)',
-                  border: '1px solid rgba(99,102,241,0.15)',
+                  color: '#ed3b91',
+                  background: 'rgba(237,59,145,0.08)',
+                  border: '1px solid rgba(237,59,145,0.15)',
                 }}
               >
                 Sign In

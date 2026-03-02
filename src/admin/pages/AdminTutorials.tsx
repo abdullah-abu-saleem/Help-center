@@ -376,7 +376,7 @@ export default function AdminTutorials() {
               onClick={() => setAudience(a.key)}
               className={`px-5 py-2 text-sm font-medium rounded-lg transition-all ${
                 audience === a.key
-                  ? 'bg-indigo-600 text-white shadow-sm'
+                  ? 'bg-[#ed3b91] text-white shadow-sm'
                   : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
               }`}
             >
@@ -398,7 +398,7 @@ export default function AdminTutorials() {
           <button
             onClick={openNew}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-sm font-semibold transition-all hover:scale-[1.02] active:scale-[0.98]"
-            style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
+            style={{ background: 'linear-gradient(135deg, #ed3b91, #d6257a)' }}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -417,7 +417,7 @@ export default function AdminTutorials() {
         {/* Tutorial List */}
         {loading ? (
           <div className="text-center py-20">
-            <div className="w-8 h-8 border-2 border-slate-200 border-t-[#8b5cf6] rounded-full animate-spin mx-auto mb-4" />
+            <div className="w-8 h-8 border-2 border-slate-200 border-t-primary-500 rounded-full animate-spin mx-auto mb-4" />
             <p className="text-sm text-slate-500">Loading tutorials...</p>
           </div>
         ) : tutorials.length === 0 ? (
@@ -428,7 +428,7 @@ export default function AdminTutorials() {
               </svg>
             </div>
             <p className="text-slate-500 mb-4">No tutorials for {AUDIENCES.find((a) => a.key === audience)?.label} yet.</p>
-            <button onClick={openNew} className="text-sm font-semibold text-indigo-600 hover:text-indigo-800">
+            <button onClick={openNew} className="text-sm font-semibold text-primary-500 hover:text-primary-800">
               Create the first tutorial
             </button>
           </div>
@@ -439,10 +439,10 @@ export default function AdminTutorials() {
                 {/* Tutorial Row */}
                 <div
                   className={`glass-card rounded-2xl p-5 flex items-center justify-between hover:shadow-lg transition-all relative overflow-hidden ${
-                    expandedId === t.id ? 'border-indigo-200 shadow-sm' : ''
+                    expandedId === t.id ? 'border-primary-200 shadow-sm' : ''
                   }`}
                 >
-                  <div className="admin-card-accent" style={{ background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)' }} />
+                  <div className="admin-card-accent" style={{ background: 'linear-gradient(135deg, #ed3b91, #d6257a)' }} />
                   <div
                     className="flex items-center gap-4 flex-1 min-w-0 cursor-pointer"
                     onClick={() => toggleExpand(t.id)}
@@ -531,7 +531,7 @@ export default function AdminTutorials() {
                       </h4>
                       <button
                         onClick={() => openNewItem(t.id)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-primary-500 bg-primary-50 rounded-lg hover:bg-primary-100 transition-colors"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -545,7 +545,7 @@ export default function AdminTutorials() {
                     ) : items.length === 0 ? (
                       <div className="text-center py-6 text-slate-400 text-sm">
                         No items yet.{' '}
-                        <button onClick={() => openNewItem(t.id)} className="text-indigo-600 hover:underline font-medium">
+                        <button onClick={() => openNewItem(t.id)} className="text-primary-500 hover:underline font-medium">
                           Add the first item
                         </button>
                       </div>
@@ -649,7 +649,7 @@ export default function AdminTutorials() {
                 <select
                   value={form.audience ?? audience}
                   onChange={(e) => setForm((f) => ({ ...f, audience: e.target.value }))}
-                  className="mt-1 w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all bg-white"
+                  className="mt-1 w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all bg-white"
                 >
                   {AUDIENCES.map((a) => (
                     <option key={a.key} value={a.key}>{a.label}</option>
@@ -664,7 +664,7 @@ export default function AdminTutorials() {
                   type="text"
                   value={form.title}
                   onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-                  className="mt-1 w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all"
+                  className="mt-1 w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all"
                   placeholder="e.g. Creating Your First Class"
                 />
               </label>
@@ -677,7 +677,7 @@ export default function AdminTutorials() {
                   dir="rtl"
                   value={form.title_ar ?? ''}
                   onChange={(e) => setForm((f) => ({ ...f, title_ar: e.target.value }))}
-                  className="mt-1 w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all"
+                  className="mt-1 w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all"
                   placeholder="العنوان بالعربية"
                 />
               </label>
@@ -689,7 +689,7 @@ export default function AdminTutorials() {
                   rows={2}
                   value={form.description ?? ''}
                   onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                  className="mt-1 w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all resize-none"
+                  className="mt-1 w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all resize-none"
                   placeholder="Brief description of the tutorial"
                 />
               </label>
@@ -702,7 +702,7 @@ export default function AdminTutorials() {
                   dir="rtl"
                   value={form.description_ar ?? ''}
                   onChange={(e) => setForm((f) => ({ ...f, description_ar: e.target.value }))}
-                  className="mt-1 w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all resize-none"
+                  className="mt-1 w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all resize-none"
                   placeholder="وصف مختصر للدرس"
                 />
               </label>
@@ -714,7 +714,7 @@ export default function AdminTutorials() {
                   type="url"
                   value={form.youtube_url}
                   onChange={(e) => setForm((f) => ({ ...f, youtube_url: e.target.value }))}
-                  className="mt-1 w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all"
+                  className="mt-1 w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all"
                   placeholder="https://www.youtube.com/watch?v=..."
                 />
                 <span className="text-xs text-slate-400 mt-1 block">Accepts youtube.com/watch?v=... and youtu.be/...</span>
@@ -727,7 +727,7 @@ export default function AdminTutorials() {
                   type="url"
                   value={form.thumbnail_url ?? ''}
                   onChange={(e) => setForm((f) => ({ ...f, thumbnail_url: e.target.value }))}
-                  className="mt-1 w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all"
+                  className="mt-1 w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all"
                   placeholder="Leave empty to auto-generate from YouTube"
                 />
               </label>
@@ -740,7 +740,7 @@ export default function AdminTutorials() {
                     type="number"
                     value={form.sort_order}
                     onChange={(e) => setForm((f) => ({ ...f, sort_order: parseInt(e.target.value) || 0 }))}
-                    className="mt-1 w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all"
+                    className="mt-1 w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all"
                   />
                 </label>
                 <label className="flex items-center gap-2 mt-6 cursor-pointer select-none">
@@ -748,7 +748,7 @@ export default function AdminTutorials() {
                     type="checkbox"
                     checked={form.is_published}
                     onChange={(e) => setForm((f) => ({ ...f, is_published: e.target.checked }))}
-                    className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                    className="w-4 h-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
                   />
                   <span className="text-sm font-medium text-slate-700">Published</span>
                 </label>
@@ -767,7 +767,7 @@ export default function AdminTutorials() {
                   onClick={handleSave}
                   disabled={saving}
                   className="px-5 py-2.5 text-sm font-semibold text-white rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
-                  style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
+                  style={{ background: 'linear-gradient(135deg, #ed3b91, #d6257a)' }}
                 >
                   {saving ? 'Saving...' : form.id ? 'Update Tutorial' : 'Create Tutorial'}
                 </button>
@@ -799,7 +799,7 @@ export default function AdminTutorials() {
                 <select
                   value={itemForm.resource_type ?? 'watch'}
                   onChange={(e) => setItemForm((f) => ({ ...f, resource_type: e.target.value }))}
-                  className="mt-1 w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all bg-white"
+                  className="mt-1 w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all bg-white"
                 >
                   <option value="watch">Watch (Video)</option>
                   <option value="download">Download</option>
@@ -814,7 +814,7 @@ export default function AdminTutorials() {
                   type="text"
                   value={itemForm.title}
                   onChange={(e) => setItemForm((f) => ({ ...f, title: e.target.value }))}
-                  className="mt-1 w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all"
+                  className="mt-1 w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all"
                   placeholder="e.g. How to Create an Assignment"
                 />
               </label>
@@ -827,7 +827,7 @@ export default function AdminTutorials() {
                   dir="rtl"
                   value={itemForm.title_ar ?? ''}
                   onChange={(e) => setItemForm((f) => ({ ...f, title_ar: e.target.value }))}
-                  className="mt-1 w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all"
+                  className="mt-1 w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all"
                   placeholder="العنوان بالعربية"
                 />
               </label>
@@ -839,7 +839,7 @@ export default function AdminTutorials() {
                   rows={2}
                   value={itemForm.description ?? ''}
                   onChange={(e) => setItemForm((f) => ({ ...f, description: e.target.value }))}
-                  className="mt-1 w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all resize-none"
+                  className="mt-1 w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all resize-none"
                 />
               </label>
 
@@ -851,7 +851,7 @@ export default function AdminTutorials() {
                   dir="rtl"
                   value={itemForm.description_ar ?? ''}
                   onChange={(e) => setItemForm((f) => ({ ...f, description_ar: e.target.value }))}
-                  className="mt-1 w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all resize-none"
+                  className="mt-1 w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all resize-none"
                 />
               </label>
 
@@ -863,7 +863,7 @@ export default function AdminTutorials() {
                     type="url"
                     value={itemForm.youtube_url ?? ''}
                     onChange={(e) => setItemForm((f) => ({ ...f, youtube_url: e.target.value }))}
-                    className="mt-1 w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all"
+                    className="mt-1 w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all"
                     placeholder="https://www.youtube.com/watch?v=..."
                   />
                 </label>
@@ -877,7 +877,7 @@ export default function AdminTutorials() {
                     type="url"
                     value={itemForm.link ?? ''}
                     onChange={(e) => setItemForm((f) => ({ ...f, link: e.target.value }))}
-                    className="mt-1 w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all"
+                    className="mt-1 w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all"
                     placeholder="https://..."
                   />
                 </label>
@@ -890,7 +890,7 @@ export default function AdminTutorials() {
                   type="url"
                   value={itemForm.thumbnail_url ?? ''}
                   onChange={(e) => setItemForm((f) => ({ ...f, thumbnail_url: e.target.value }))}
-                  className="mt-1 w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all"
+                  className="mt-1 w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all"
                   placeholder="Leave empty to auto-generate from YouTube"
                 />
               </label>
@@ -903,7 +903,7 @@ export default function AdminTutorials() {
                     type="number"
                     value={itemForm.sort_order}
                     onChange={(e) => setItemForm((f) => ({ ...f, sort_order: parseInt(e.target.value) || 0 }))}
-                    className="mt-1 w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 outline-none transition-all"
+                    className="mt-1 w-full px-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-4 focus:ring-primary-50 outline-none transition-all"
                   />
                 </label>
                 <label className="flex items-center gap-2 mt-6 cursor-pointer select-none">
@@ -911,7 +911,7 @@ export default function AdminTutorials() {
                     type="checkbox"
                     checked={itemForm.is_published ?? true}
                     onChange={(e) => setItemForm((f) => ({ ...f, is_published: e.target.checked }))}
-                    className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                    className="w-4 h-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
                   />
                   <span className="text-sm font-medium text-slate-700">Published</span>
                 </label>
@@ -930,7 +930,7 @@ export default function AdminTutorials() {
                   onClick={handleSaveItem}
                   disabled={itemSaving}
                   className="px-5 py-2.5 text-sm font-semibold text-white rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
-                  style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
+                  style={{ background: 'linear-gradient(135deg, #ed3b91, #d6257a)' }}
                 >
                   {itemSaving ? 'Saving...' : itemForm.id ? 'Update Item' : 'Create Item'}
                 </button>

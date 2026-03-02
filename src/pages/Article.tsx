@@ -14,6 +14,8 @@ import {
 import { formatDate, uniqueSlugIds, scrollToHash } from '../lib/utils';
 import { useDataRefresh } from '../lib/dataEvents';
 import { articles as staticArticles, sections as staticSections, categories as staticCategories } from '../data';
+import { HelpCenterShell } from '../components/theme/HelpCenterShell';
+import { COLORS } from '../theme/colors';
 
 // ── Stable references (defined outside component to prevent re-renders) ──
 const REMARK_PLUGINS = [remarkGfm];
@@ -188,7 +190,7 @@ export default function ArticlePage() {
     return (
       <Layout>
         <div className="flex items-center justify-center py-20">
-          <div className="w-8 h-8 border-2 border-slate-200 border-t-[#6366f1] rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-slate-200 border-t-[#ed3b91] rounded-full animate-spin" />
         </div>
       </Layout>
     );
@@ -209,7 +211,8 @@ export default function ArticlePage() {
 
   return (
     <Layout>
-      <div className="glass-bg min-h-screen">
+      <HelpCenterShell>
+      <div className="min-h-screen">
         <div className="container mx-auto px-4 md:px-6 max-w-[1280px]">
 
           {/* Breadcrumbs (Desktop) */}
@@ -307,7 +310,7 @@ export default function ArticlePage() {
                      <Link
                         key={a.id}
                         to={`/help/article/${a.slug}`}
-                        className={`block text-sm py-1.5 px-2 rounded-md ${a.id === article.id ? 'bg-purple-50 text-purple-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}
+                        className={`block text-sm py-1.5 px-2 rounded-md ${a.id === article.id ? 'bg-[#fdf2f8] text-[#ed3b91] font-bold' : 'text-slate-600 hover:bg-slate-50'}`}
                       >
                         {localize(a, 'title')}
                      </Link>
@@ -340,14 +343,14 @@ export default function ArticlePage() {
             <main className="min-w-0">
               {/* Mobile TOC Dropdown */}
               {mobileTocOpen && toc.length > 0 && (
-                 <div className="lg:hidden mb-6 bg-purple-50 rounded-lg p-4 border border-purple-100">
-                    <h4 className="font-bold text-purple-900 mb-2 text-sm uppercase">{t('tableOfContents')}</h4>
+                 <div className="lg:hidden mb-6 bg-[#fdf2f8] rounded-lg p-4 border border-[#fce7f3]">
+                    <h4 className="font-bold text-[#091e42] mb-2 text-sm uppercase">{t('tableOfContents')}</h4>
                     <ul className="space-y-2">
                        {toc.map(item => (
                          <li key={item.id}>
                            <a
                              href={`#${item.id}`}
-                             className="block text-sm text-purple-700 hover:underline"
+                             className="block text-sm text-[#ed3b91] hover:underline"
                              onClick={(e) => {
                                e.preventDefault();
                                setMobileTocOpen(false);
@@ -362,7 +365,7 @@ export default function ArticlePage() {
                  </div>
               )}
 
-              <article className="prose prose-slate max-w-none prose-headings:text-slate-900 prose-a:text-purple-600 prose-a:no-underline hover:prose-a:underline">
+              <article className="prose prose-slate max-w-none prose-headings:text-slate-900 prose-a:text-[#ed3b91] prose-a:no-underline hover:prose-a:underline">
                  <h1 className="text-4xl font-extrabold text-slate-900 mb-5 leading-tight tracking-tight">{localize(article, 'title')}</h1>
 
                  {/* Intro / Summary */}
@@ -424,6 +427,7 @@ export default function ArticlePage() {
           </div>
         </div>
       </div>
+      </HelpCenterShell>
     </Layout>
   );
 }

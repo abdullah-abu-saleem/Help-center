@@ -7,6 +7,7 @@ import {
   getHcCategoryBySlug,
   getHcSectionsByCategory,
   getHcSectionBySlugs,
+  getHcSectionBySlugOnly,
   getHcGroupsBySection,
   getHcArticlesByGroup,
   getHcArticlesBySection,
@@ -16,6 +17,8 @@ import {
   type HcArticle,
 } from '../lib/helpCenterApi';
 import { scrollToHash } from '../lib/utils';
+import { HelpCenterShell } from '../components/theme/HelpCenterShell';
+import { COLORS } from '../theme/colors';
 
 export default function HelpSectionLandingPage() {
   const { t, localize } = useI18n();
@@ -40,9 +43,20 @@ export default function HelpSectionLandingPage() {
     setDbLoaded(false);
     (async () => {
       try {
-        const sec = await getHcSectionBySlugs(categorySlug || '', sectionSlug || '');
+        console.log('[HelpSectionLandingPage] fetching section — categorySlug:', categorySlug, 'sectionSlug:', sectionSlug);
+        let sec = await getHcSectionBySlugs(categorySlug || '', sectionSlug || '');
+        // Fallback: if category-scoped lookup fails, try by section slug only
+        if (!sec && sectionSlug) {
+          console.warn('[HelpSectionLandingPage] category-scoped lookup returned null, trying slug-only fallback for:', sectionSlug);
+          sec = await getHcSectionBySlugOnly(sectionSlug);
+        }
         if (cancelled) return;
-        if (!sec) { setDbLoaded(true); return; }
+        if (!sec) {
+          console.warn('[HelpSectionLandingPage] section not found even with fallback — sectionSlug:', sectionSlug);
+          setDbLoaded(true);
+          return;
+        }
+        console.log('[HelpSectionLandingPage] section found — id:', sec.id, 'slug:', sec.slug);
         setDbSection(sec);
 
         const catData = (sec as any).hc_categories;
@@ -53,7 +67,7 @@ export default function HelpSectionLandingPage() {
         const [siblings, grps, secArts] = await Promise.all([
           getHcSectionsByCategory(catId),
           getHcGroupsBySection(sec.id),
-          getHcArticlesBySection(sec.id, catId),
+          getHcArticlesBySection(sec.id),
         ]);
         if (cancelled) return;
         console.log('[HelpSectionLandingPage] articles.length:', secArts.length, 'groups.length:', grps.length);
@@ -119,7 +133,7 @@ export default function HelpSectionLandingPage() {
     return (
       <Layout>
         <div className="flex items-center justify-center py-20">
-          <div className="w-8 h-8 border-2 border-slate-200 border-t-[#6366f1] rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-slate-200 border-t-[#ed3b91] rounded-full animate-spin" />
         </div>
       </Layout>
     );
@@ -151,16 +165,17 @@ export default function HelpSectionLandingPage() {
 
   return (
     <Layout hero={SearchStrip}>
-      <div className="glass-bg pb-20">
+      <HelpCenterShell>
+      <div className="pb-20">
 
         {/* Breadcrumbs */}
         <div className="mx-auto max-w-7xl px-4 md:px-6 py-6">
           <nav className="text-sm text-slate-500 flex items-center gap-2">
-            <Link to="/help" className="hover:text-purple-600 transition-colors">{t('stringHelpCenter')}</Link>
+            <Link to="/help" className="hover:text-[#ed3b91] transition-colors">{t('stringHelpCenter')}</Link>
             <span className="text-slate-300 text-xs">›</span>
-            <Link to={`/help/category/${category.slug}`} className="hover:text-purple-600 transition-colors">{localize(category, 'title')}</Link>
+            <Link to={`/help/category/${category.slug}`} className="hover:text-[#ed3b91] transition-colors">{localize(category, 'title')}</Link>
             <span className="text-slate-300 text-xs">›</span>
-            <span className="text-slate-900 font-medium">{localize(section, 'title')}</span>
+            <span className="text-[#091e42] font-medium">{localize(section, 'title')}</span>
           </nav>
         </div>
 
@@ -171,7 +186,7 @@ export default function HelpSectionLandingPage() {
             {/* Left Sidebar Navigation */}
             <aside className="hidden lg:block">
               <div className="glass-sidebar p-6 sticky top-24" style={{ background: '#fff' }}>
-                <h3 className="text-[15px] font-bold text-slate-900 mb-5">{localize(section, 'title')}</h3>
+                <h3 className="text-[15px] font-bold text-[#091e42] mb-5">{localize(section, 'title')}</h3>
                 <nav className="text-[15px]">
                   <ul className="space-y-1">
                     {siblingSections.map(sibSection => {
@@ -226,7 +241,7 @@ export default function HelpSectionLandingPage() {
             {/* Right Main Content — pure link list */}
             <main className="min-w-0">
               <header className="mb-8">
-                <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
+                <h1 className="text-3xl md:text-4xl font-extrabold text-[#091e42] tracking-tight leading-tight">
                   {localize(section, 'title')}
                 </h1>
                 {localize(section, 'description') && (
@@ -308,6 +323,7 @@ export default function HelpSectionLandingPage() {
           </div>
         </div>
       </div>
+      </HelpCenterShell>
     </Layout>
   );
 }

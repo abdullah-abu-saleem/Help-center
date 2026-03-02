@@ -101,7 +101,7 @@ CREATE POLICY "Admins have full access to sections"
 ALTER TABLE public.hc_articles
   ADD COLUMN IF NOT EXISTS is_published boolean NOT NULL DEFAULT true;
 
-UPDATE public.hc_articles SET is_published = true WHERE is_published IS NULL;
+UPDATE public.hc_articles SET is_published = true WHERE is_published IS NOT TRUE;
 
 ALTER TABLE public.hc_articles ENABLE ROW LEVEL SECURITY;
 

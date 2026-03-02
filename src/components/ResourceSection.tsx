@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Resource, ResourceSectionMeta } from '../resourcesData';
 import { ResourceCard } from './ResourceCard';
+import { COLORS } from '../theme/colors';
 
 interface ResourceSectionProps {
   meta: ResourceSectionMeta;
@@ -14,8 +15,8 @@ export const ResourceSection: React.FC<ResourceSectionProps> = ({ meta, resource
     <section className="mb-16 last:mb-0">
       {/* Section header */}
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-slate-900 mb-2">{meta.title}</h2>
-        <p className="text-base text-slate-500 leading-relaxed">{meta.description}</p>
+        <h2 className="text-2xl font-bold mb-2" style={{ color: COLORS.neutral }}>{meta.title}</h2>
+        <p className="text-base leading-relaxed" style={{ color: COLORS.neutralLight }}>{meta.description}</p>
       </div>
 
       {/* Cards grid: 1 → 2 → 4 columns */}

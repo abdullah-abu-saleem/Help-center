@@ -6,15 +6,18 @@ import type { ResourceVideo } from '../data/resourceVideos';
 import { TutorialCarousel } from '../components/resources/TutorialCarousel';
 import { VideoPlayerModal } from '../components/resources/VideoPlayerModal';
 import { getHcResourceVideos, type HcResourceVideo } from '../lib/helpCenterApi';
+import { HelpCenterShell } from '../components/theme/HelpCenterShell';
+import { ResourcesShell } from '../components/resources/ResourcesShell';
+import { COLORS } from '../theme/colors';
 
 /* ══════════════════════════════════════════════════════════
    TeacherResourcesPage — Supabase-driven videos, carousel
    Hero section preserved, videos from hc_resource_videos.
    ══════════════════════════════════════════════════════════ */
 
-const PINK = '#EC4899';
-const PINK_HOVER = '#DB2777';
-const PINK_ACTIVE = '#BE185D';
+const PINK = COLORS.primary;
+const PINK_HOVER = COLORS.primaryHover;
+const PINK_ACTIVE = COLORS.primaryActive;
 
 export default function TeacherResourcesPage() {
   const { t, lang, localize } = useI18n();
@@ -62,7 +65,9 @@ export default function TeacherResourcesPage() {
 
   return (
     <Layout>
-      <div style={{ position: 'relative', zIndex: 1, minHeight: '100vh' }}>
+      <HelpCenterShell noBg>
+      <ResourcesShell>
+      <div style={{ position: 'relative', zIndex: 1 }}>
         {/* ── Hero (preserved exactly) ── */}
         <section
           style={{
@@ -105,11 +110,11 @@ export default function TeacherResourcesPage() {
 
             <h1 style={{
               fontSize: 'clamp(2rem, 5vw, 3.5rem)', fontWeight: 800,
-              letterSpacing: '-0.02em', lineHeight: 1.1, color: '#0f172a', marginBottom: 20,
+              letterSpacing: '-0.02em', lineHeight: 1.1, color: COLORS.neutral, marginBottom: 20,
             }}>
               <span className="gradient-text">{t('resTeacherTitle')}</span>{' '}
               <span style={{
-                background: 'linear-gradient(135deg, #ED3B91, #c026a8)',
+                background: 'linear-gradient(135deg, #ed3b91, #c026a8)',
                 WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
               }}>
                 {t('resTeacherTitleAccent')}
@@ -117,7 +122,7 @@ export default function TeacherResourcesPage() {
             </h1>
 
             <p style={{
-              fontSize: 'clamp(1rem, 2vw, 1.125rem)', color: '#64748b',
+              fontSize: 'clamp(1rem, 2vw, 1.125rem)', color: COLORS.neutralLight,
               lineHeight: 1.7, maxWidth: 540, margin: '0 auto 32px',
             }}>
               {t('resTeacherSubtitle')}
@@ -136,7 +141,7 @@ export default function TeacherResourcesPage() {
         <div style={{ padding: '64px 0 24px' }}>
           {loading ? (
             <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
-              <div className="w-8 h-8 border-2 border-slate-200 border-t-[#6366f1] rounded-full animate-spin" />
+              <div className="w-8 h-8 border-2 border-slate-200 border-t-[#ed3b91] rounded-full animate-spin" />
             </div>
           ) : error ? (
             <div style={{ textAlign: 'center', padding: '40px 24px', color: '#ef4444' }}>
@@ -173,18 +178,18 @@ export default function TeacherResourcesPage() {
                 background: PINK, color: '#fff',
                 fontSize: 15, fontWeight: 700,
                 textDecoration: 'none',
-                boxShadow: '0 4px 16px rgba(236,72,153,0.3)',
+                boxShadow: '0 4px 16px rgba(237,59,145,0.3)',
                 transition: 'background 0.2s, transform 0.2s, box-shadow 0.2s',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'translateY(-2px)';
                 e.currentTarget.style.background = PINK_HOVER;
-                e.currentTarget.style.boxShadow = '0 8px 24px rgba(236,72,153,0.4)';
+                e.currentTarget.style.boxShadow = '0 8px 24px rgba(237,59,145,0.4)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'translateY(0)';
                 e.currentTarget.style.background = PINK;
-                e.currentTarget.style.boxShadow = '0 4px 16px rgba(236,72,153,0.3)';
+                e.currentTarget.style.boxShadow = '0 4px 16px rgba(237,59,145,0.3)';
               }}
               onMouseDown={(e) => { e.currentTarget.style.background = PINK_ACTIVE; }}
               onMouseUp={(e) => { e.currentTarget.style.background = PINK_HOVER; }}
@@ -194,6 +199,8 @@ export default function TeacherResourcesPage() {
           </div>
         )}
       </div>
+      </ResourcesShell>
+      </HelpCenterShell>
 
       {/* Player modal */}
       {playerVideo && (

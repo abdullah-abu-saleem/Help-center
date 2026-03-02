@@ -5,6 +5,7 @@ import { useI18n } from '../../lib/i18n';
 import type { ResourceVideo } from '../../data/resourceVideos';
 import { TutorialCard } from './TutorialCard';
 import { VideoPlayerModal } from './VideoPlayerModal';
+import { ResourcesShell } from './ResourcesShell';
 
 /* ═══════════════════════════════════════════════════
    ResourcesGridView — "See all" grid with search
@@ -47,7 +48,8 @@ export const ResourcesGridView: React.FC<ResourcesGridViewProps> = ({
 
   return (
     <Layout>
-      <div style={{ minHeight: '100vh' }}>
+      <ResourcesShell>
+      <div>
         {/* Header */}
         <div style={{
           background: '#f8fafc', borderBottom: '1px solid #f1f5f9',
@@ -110,7 +112,7 @@ export const ResourcesGridView: React.FC<ResourcesGridViewProps> = ({
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px 80px' }}>
           {loading ? (
             <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
-              <div className="w-8 h-8 border-2 border-slate-200 border-t-[#6366f1] rounded-full animate-spin" />
+              <div className="w-8 h-8 border-2 border-slate-200 border-t-[#ed3b91] rounded-full animate-spin" />
             </div>
           ) : filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 0', color: '#94a3b8' }}>
@@ -140,6 +142,7 @@ export const ResourcesGridView: React.FC<ResourcesGridViewProps> = ({
           )}
         </div>
       </div>
+      </ResourcesShell>
 
       {/* Player modal */}
       {playerVideo && (

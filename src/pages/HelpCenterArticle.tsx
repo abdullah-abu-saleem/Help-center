@@ -18,10 +18,8 @@ export default function HelpCenterArticle() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => { console.log('[HC_ARTICLE] mounted, slug:', articleSlug); }, []);
-
   const fetchData = useCallback(() => {
-    if (!articleSlug) { setLoading(false); return; }
+    if (!articleSlug) return;
     setLoading(true);
     getHcArticleBySlug(articleSlug)
       .then((art) => {
@@ -58,7 +56,7 @@ export default function HelpCenterArticle() {
           <p className="text-red-500 mb-4">{error || 'Article not found.'}</p>
           <Link
             to={categorySlug && sectionSlug ? `/help-center/${categorySlug}/${sectionSlug}` : '/help-center'}
-            className="text-sm text-indigo-600 hover:text-indigo-800"
+            className="text-sm text-primary-500 hover:text-primary-700"
           >
             Back
           </Link>
@@ -74,11 +72,7 @@ export default function HelpCenterArticle() {
   const secSlug = sec?.slug || sectionSlug || '';
   const secTitle = sec ? localized(sec.title, sec.title_ar) : 'Section';
 
-  // Priority: body_markdown > content (with language fallback)
-  const body =
-    localized(article.body_markdown, article.body_markdown_ar) ||
-    localized(article.content, article.content_ar) ||
-    '';
+  const body = localized(article.body_markdown, article.body_markdown_ar);
 
   return (
     <Layout>
@@ -124,14 +118,14 @@ export default function HelpCenterArticle() {
         {article.tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-8">
             {article.tags.map((tag) => (
-              <span key={tag} className="text-xs px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-600">
+              <span key={tag} className="text-xs px-2.5 py-1 rounded-full bg-primary-50 text-primary-500">
                 {tag}
               </span>
             ))}
           </div>
         )}
 
-        <div className="prose prose-slate max-w-none prose-headings:font-bold prose-a:text-indigo-600 prose-code:bg-slate-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:text-sm">
+        <div className="prose prose-slate max-w-none prose-headings:font-bold prose-a:text-primary-500 prose-code:bg-slate-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:text-sm">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{body}</ReactMarkdown>
         </div>
 
@@ -146,7 +140,7 @@ export default function HelpCenterArticle() {
         <div className="mt-8">
           <Link
             to={`/help-center/${catSlug}/${secSlug}`}
-            className="inline-flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-800 transition-colors"
+            className="inline-flex items-center gap-2 text-sm text-primary-500 hover:text-primary-700 transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />

@@ -1,20 +1,135 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
+import { useI18n } from '../lib/i18n';
+import { NoiseOverlay } from '../components/ui/NoiseOverlay';
+import { NeuroNetworkCanvas } from '../components/theme/NeuroNetworkCanvas';
+import {
+  Eye, Mail, Lock, ArrowRight, Command, CheckCircle2,
+  QrCode, ScanLine, ChevronRight, Users, School,
+  Building2, ArrowLeft, Rocket, ChevronDown, AlertCircle,
+} from 'lucide-react';
 
-type LoginMethod = 'email' | 'class-code' | 'qr';
+// --- BRAND COLORS ---
+const COLORS = {
+  primary: '#ed3b91',
+  secondary: '#08b8fb',
+  neutral: '#091e42',
+  neutralLight: '#6882a9',
+  error: '#ef4444',
+};
+
+// --- DATA: Country Codes ---
+const COUNTRY_CODES = [
+  { code: 'JO', dial: '+962', flag: '🇯🇴', name: 'Jordan' },
+  { code: 'SA', dial: '+966', flag: '🇸🇦', name: 'Saudi Arabia' },
+  { code: 'AE', dial: '+971', flag: '🇦🇪', name: 'UAE' },
+  { code: 'US', dial: '+1',   flag: '🇺🇸', name: 'USA' },
+  { code: 'UK', dial: '+44',  flag: '🇬🇧', name: 'UK' },
+];
+
+// --- COMPONENT: Spotlight Input ---
+const SpotlightInput = ({
+  children,
+  className = '',
+  as: Component = 'div',
+  onClick,
+  hasError = false,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  as?: any;
+  onClick?: () => void;
+  hasError?: boolean;
+}) => {
+  const divRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [opacity, setOpacity] = useState(0);
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!divRef.current) return;
+    const rect = divRef.current.getBoundingClientRect();
+    setPosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+  };
+
+  return (
+    <Component
+      ref={divRef}
+      onMouseMove={handleMouseMove}
+      onFocus={() => setOpacity(1)}
+      onBlur={() => setOpacity(0)}
+      onMouseEnter={() => setOpacity(1)}
+      onMouseLeave={() => setOpacity(0)}
+      onClick={onClick}
+      className={`relative rounded-xl overflow-hidden bg-white border transition-all duration-300 ${
+        hasError ? 'border-red-300 ring-2 ring-red-100' : 'border-slate-200'
+      } group ${className}`}
+    >
+      <div
+        className="pointer-events-none absolute -inset-px opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+        style={{
+          opacity,
+          background: `radial-gradient(600px circle at ${position.x}px ${position.y}px, rgba(8, 184, 251, 0.05), transparent 40%)`,
+        }}
+      />
+      <div
+        className="pointer-events-none absolute -inset-px opacity-0 transition-opacity duration-300 group-focus-within:opacity-100"
+        style={{
+          background: `radial-gradient(400px circle at ${position.x}px ${position.y}px, ${
+            hasError ? 'rgba(239, 68, 68, 0.4)' : 'rgba(8, 184, 251, 0.5)'
+          }, transparent 40%)`,
+          maskImage: 'linear-gradient(#fff, #fff)',
+          maskComposite: 'exclude',
+          WebkitMaskComposite: 'xor' as any,
+          padding: '1px',
+        }}
+      />
+      <div className="relative h-full">{children}</div>
+    </Component>
+  );
+};
+
+type AuthView = 'login' | 'register-select' | 'register-create' | 'register-join' | 'email-confirmation' | 'forgot-password';
 
 export default function Login() {
-  const { login, user } = useAuth();
+  const { login, register, user } = useAuth();
   const navigate = useNavigate();
-  const [loginMethod, setLoginMethod] = useState<LoginMethod>('email');
+  const { locale, setLocale } = useI18n();
+
+  // Navigation State
+  const [view, setView] = useState<AuthView>('login');
+
+  // Login State
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [classCode, setClassCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [loginMethod, setLoginMethod] = useState<'email' | 'code' | 'qr'>('email');
+  const [loginError, setLoginError] = useState('');
 
-  /** Redirect destination based on role */
+  // Register Fields
+  const [orgName, setOrgName] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regPhone, setRegPhone] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [regConfirmPassword, setRegConfirmPassword] = useState('');
+  const [showRegPassword, setShowRegPassword] = useState(false);
+  const [selectedCountry, setSelectedCountry] = useState(COUNTRY_CODES[0]);
+  const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
+
+  // Forgot Password
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotSubmitted, setForgotSubmitted] = useState(false);
+
+  // Errors
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => { setMounted(true); }, []);
+
+  // Redirect if already logged in
   const getRedirect = (role: string) => {
     const r = role.toLowerCase().trim();
     return r === 'teacher' || r === 'admin' ? '/teacher/dashboard' : '/help';
@@ -24,226 +139,542 @@ export default function Login() {
     if (user) navigate(getRedirect(user.role), { replace: true });
   }, [user, navigate]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // --- Login Handler (real auth) ---
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-
+    setLoginError('');
     if (!email.trim() || !password.trim()) {
-      setError('Please enter both email and password.');
+      setLoginError('Please enter both email and password.');
       return;
     }
-
-    setIsSubmitting(true);
+    setIsLoading(true);
     try {
       const result = await login(email.trim().toLowerCase(), password);
       if (!result.success) {
-        setError(result.error || 'Invalid credentials. Please try again.');
+        setLoginError(result.error || 'Invalid credentials. Please try again.');
       }
-      // On success, the useEffect above handles redirect once user state updates
     } catch (err: any) {
-      setError(err.message || 'An unexpected error occurred. Please try again.');
+      setLoginError(err.message || 'An unexpected error occurred.');
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
     }
   };
 
+  // --- Register Handler (real auth) ---
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrors({});
+    const newErrors: Record<string, string> = {};
+
+    if (!fullName.trim()) { newErrors.name = 'Name is required.'; }
+    if (regPassword.length < 6) { newErrors.password = 'Password must be at least 6 characters.'; }
+    if (regPassword !== regConfirmPassword) { newErrors.password = 'Passwords do not match.'; }
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const result = await register(regEmail.trim().toLowerCase(), regPassword, fullName.trim());
+      if (!result.success) {
+        setErrors({ email: result.error || 'Registration failed.' });
+      } else {
+        changeView('email-confirmation');
+      }
+    } catch (err: any) {
+      setErrors({ email: err.message || 'An unexpected error occurred.' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // --- Forgot Password Handler ---
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      const { supabase } = await import('../lib/supabase');
+      await supabase.auth.resetPasswordForEmail(forgotEmail, {
+        redirectTo: `${window.location.origin}${window.location.pathname}#/login`,
+      });
+      setForgotSubmitted(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const changeView = (newView: AuthView) => {
+    setView(newView);
+    setErrors({});
+    setLoginError('');
+  };
+
+  const lang = locale === 'en-US' ? 'en' : 'ar';
+
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-8 glass-bg">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="mb-8 flex items-center justify-between">
-          <Link to="/help" className="flex items-center gap-2">
-            <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{
-                background: 'linear-gradient(135deg, #ED3B91, #08B8FB)',
-                boxShadow: '0 2px 8px rgba(237, 59, 145, 0.15)'
-              }}
-            >
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z" />
-              </svg>
+    <div className="min-h-[100dvh] w-full flex font-sans bg-white text-[#091e42] selection:bg-[#08b8fb]/20 overflow-hidden relative">
+      <NoiseOverlay />
+
+      <style>{`
+        @keyframes fadeScale {
+          from { opacity: 0; transform: scale(0.95) translateY(10px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        @keyframes scan {
+          0% { top: 0%; opacity: 0; }
+          10% { opacity: 1; }
+          90% { opacity: 1; }
+          100% { top: 100%; opacity: 0; }
+        }
+        .animate-entry { animation: fadeScale 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
+        .animate-scan { animation: scan 3s linear infinite; }
+        .delay-100 { animation-delay: 100ms; }
+        .delay-200 { animation-delay: 200ms; }
+        .delay-300 { animation-delay: 300ms; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
+      `}</style>
+
+      <div className="flex w-full h-full">
+
+        {/* --- LEFT SIDE: Form Container --- */}
+        <div className="w-full lg:w-[40%] xl:w-[35%] flex flex-col px-8 sm:px-12 lg:px-16 relative z-20 bg-white border-r border-slate-100 h-screen overflow-y-auto custom-scrollbar">
+
+          {/* HEADER */}
+          <div className="w-full flex items-center justify-between pt-8 pb-4 mb-auto shrink-0">
+            <img
+              src="https://string.education/assets/Logo-fhKqX0L9.svg"
+              alt="String Logo"
+              className="h-10 w-auto cursor-pointer"
+              onClick={() => changeView('login')}
+            />
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setLocale(locale === 'en-US' ? 'ar-AR' : 'en-US')}
+                className="text-xs font-bold text-[#091e42] hover:text-[#08b8fb] w-6 text-center"
+              >
+                {lang === 'en' ? 'ع' : 'EN'}
+              </button>
             </div>
-          </Link>
-          <div className="text-right">
-            <span className="text-sm text-slate-400">ع</span>
-          </div>
-        </div>
-
-        {/* Login Card */}
-        <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100">
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-slate-900 mb-2">Welcome back</h1>
-            <p className="text-sm text-slate-500">Enter your details to access your workspace.</p>
           </div>
 
-          {error && (
-            <div className="mb-6 p-3.5 rounded-xl bg-red-50 border border-red-100 text-sm text-red-600">
-              {error}
-            </div>
-          )}
+          {/* MAIN CONTENT */}
+          <div className={`w-full max-w-[380px] mx-auto transition-all duration-700 my-auto py-8 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
 
-          {/* Email Login Form */}
-          {loginMethod === 'email' && (
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Email Input */}
-              <div>
-                <label className="block text-sm font-medium text-slate-600 mb-2">
-                  Email Address
-                </label>
-                <div className="relative">
-                  <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
-                    </svg>
+            {/* ═══════════ LOGIN VIEW ═══════════ */}
+            {view === 'login' && (
+              <>
+                <div className="mb-8 animate-entry">
+                  <h1 className="text-3xl font-bold tracking-tight text-[#091e42] mb-2">Welcome back</h1>
+                  <p className="text-[#6882a9] text-sm">Enter your details to access your workspace.</p>
+                </div>
+
+                {loginError && (
+                  <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-100 text-sm text-red-600 flex items-center gap-2 animate-entry">
+                    <AlertCircle size={16} /> {loginError}
                   </div>
-                  <input
-                    type="email"
-                    className="w-full pl-11 pr-4 py-3.5 text-sm rounded-xl border border-slate-200 bg-white focus:border-slate-300 focus:ring-4 focus:ring-slate-100 outline-none transition-all"
-                    placeholder="name@string.education"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
+                )}
+
+                <div className="min-h-[280px]">
+                  {loginMethod === 'email' && (
+                    <form onSubmit={handleLogin} className="space-y-4 animate-entry delay-100">
+                      <div className="space-y-1">
+                        <label className="text-xs font-semibold text-[#6882a9] ml-1">Email Address</label>
+                        <SpotlightInput>
+                          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6882a9]"><Mail size={16} /></div>
+                          <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-transparent text-[#091e42] pl-10 pr-4 py-3 rounded-xl outline-none placeholder:text-[#6882a9]/60 text-sm font-medium" placeholder="name@string.education" />
+                        </SpotlightInput>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex justify-between items-center ml-1">
+                          <label className="text-xs font-semibold text-[#6882a9]">Password</label>
+                          <button type="button" onClick={() => changeView('forgot-password')} className="text-xs font-bold text-[#08b8fb] hover:underline">Forgot?</button>
+                        </div>
+                        <SpotlightInput>
+                          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6882a9]"><Lock size={16} /></div>
+                          <input type={showPassword ? 'text' : 'password'} required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-transparent text-[#091e42] pl-10 pr-10 py-3 rounded-xl outline-none placeholder:text-[#6882a9]/60 text-sm font-medium" placeholder="Enter password" />
+                          <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6882a9] hover:text-[#091e42]"><Eye size={16} /></button>
+                        </SpotlightInput>
+                      </div>
+                      <button type="submit" disabled={isLoading} className="w-full bg-[#ed3b91] hover:bg-[#d6257a] text-white font-semibold py-3 rounded-xl transition-all shadow-md hover:shadow-lg active:scale-[0.99] flex items-center justify-center gap-2 text-sm">
+                        {isLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <>Log In <ArrowRight size={16} /></>}
+                      </button>
+                    </form>
+                  )}
+
+                  {loginMethod === 'code' && (
+                    <div className="space-y-6 animate-entry">
+                      <div className="text-center space-y-2">
+                        <h3 className="text-[#091e42] font-bold text-lg">Enter Class Code</h3>
+                        <p className="text-xs text-[#6882a9]">Ask your teacher for the 6-character code.</p>
+                      </div>
+                      <div className="relative group">
+                        <SpotlightInput className="border-2 group-focus-within:border-[#08b8fb] transition-colors">
+                          <input type="text" maxLength={6} value={classCode} onChange={(e) => setClassCode(e.target.value.toUpperCase())} className="w-full bg-transparent text-[#091e42] py-4 text-center rounded-xl outline-none font-mono text-3xl font-bold tracking-[0.5em] uppercase placeholder:text-[#6882a9]/20" placeholder="······" />
+                        </SpotlightInput>
+                      </div>
+                      <button className="w-full bg-[#091e42] hover:bg-[#08b8fb] text-white font-semibold py-3.5 rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all active:scale-[0.99] flex items-center justify-center gap-2">
+                        Join Class <ArrowRight size={16} />
+                      </button>
+                    </div>
+                  )}
+
+                  {loginMethod === 'qr' && (
+                    <div className="animate-entry flex flex-col items-center space-y-6">
+                      <div className="text-center space-y-1">
+                        <h3 className="text-[#091e42] font-bold text-lg">Scan QR Badge</h3>
+                        <p className="text-xs text-[#6882a9]">Hold your badge up to the camera.</p>
+                      </div>
+                      <div className="relative w-64 h-64 bg-slate-900 rounded-3xl overflow-hidden shadow-2xl ring-4 ring-slate-50">
+                        <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle,rgba(255,255,255,0.2)_1px,transparent_1px)] bg-[size:20px_20px]"></div>
+                        <div className="absolute left-0 right-0 h-0.5 bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.8)] animate-scan z-10"></div>
+                        <div className="absolute inset-0 flex items-center justify-center"><QrCode className="text-white/20 w-24 h-24" /></div>
+                      </div>
+                      <button className="text-sm font-semibold text-[#091e42] hover:text-[#ed3b91] flex items-center gap-2 transition-colors bg-slate-50 px-4 py-2 rounded-full border border-slate-100 hover:border-slate-200">
+                        <ScanLine size={16} /> Allow Camera Access
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-center gap-6 text-xs font-medium text-[#6882a9] mt-6 animate-entry delay-200">
+                  <button onClick={() => setLoginMethod('email')} className={`hover:text-[#08b8fb] transition-colors ${loginMethod === 'email' ? 'text-[#08b8fb] underline underline-offset-4' : ''}`}>Email Login</button>
+                  <button onClick={() => setLoginMethod('code')} className={`hover:text-[#08b8fb] transition-colors ${loginMethod === 'code' ? 'text-[#08b8fb] underline underline-offset-4' : ''}`}>Class Code</button>
+                  <button onClick={() => setLoginMethod('qr')} className={`hover:text-[#08b8fb] transition-colors ${loginMethod === 'qr' ? 'text-[#08b8fb] underline underline-offset-4' : ''}`}>QR Badge</button>
+                </div>
+
+                <div className="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between animate-entry delay-300">
+                  <span className="text-xs text-[#6882a9]">Or continue with</span>
+                  <div className="flex gap-2">
+                    <button className="w-9 h-9 flex items-center justify-center rounded-full bg-white border border-slate-200 hover:border-[#08b8fb] hover:bg-[#f0f9ff] transition-all group">
+                      <svg className="w-4 h-4 text-[#091e42] group-hover:text-[#08b8fb] fill-current" viewBox="0 0 24 24"><path d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"/></svg>
+                    </button>
+                    <button className="w-9 h-9 flex items-center justify-center rounded-full bg-white border border-slate-200 hover:border-[#08b8fb] hover:bg-[#f0f9ff] transition-all group">
+                      <div className="w-4 h-4 grid grid-cols-2 gap-0.5"><div className="bg-[#091e42] group-hover:bg-[#08b8fb]" /><div className="bg-[#091e42] group-hover:bg-[#08b8fb]" /><div className="bg-[#091e42] group-hover:bg-[#08b8fb]" /><div className="bg-[#091e42] group-hover:bg-[#08b8fb]" /></div>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-6 text-center animate-entry delay-300">
+                  <p className="text-xs text-[#6882a9]">New to String? <button onClick={() => changeView('register-select')} className="font-bold text-[#ed3b91] hover:underline">Register</button></p>
+                </div>
+              </>
+            )}
+
+            {/* ═══════════ FORGOT PASSWORD VIEW ═══════════ */}
+            {view === 'forgot-password' && (
+              <div className="animate-entry">
+                <button onClick={() => changeView('login')} className="flex items-center gap-1 text-[#6882a9] hover:text-[#091e42] text-xs font-semibold mb-6 transition-colors">
+                  <ArrowLeft size={14} /> Back to Login
+                </button>
+
+                {!forgotSubmitted ? (
+                  <>
+                    <h1 className="text-3xl font-bold tracking-tight text-[#091e42] mb-2">Reset password</h1>
+                    <p className="text-[#6882a9] text-sm mb-8">Enter your email and we'll send you a reset link.</p>
+
+                    <form onSubmit={handleForgotPassword} className="space-y-4">
+                      <div className="space-y-1">
+                        <label className="text-xs font-semibold text-[#6882a9] ml-1">Email Address</label>
+                        <SpotlightInput>
+                          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6882a9]"><Mail size={16} /></div>
+                          <input type="email" required value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} className="w-full bg-transparent text-[#091e42] pl-10 pr-4 py-3 rounded-xl outline-none placeholder:text-[#6882a9]/60 text-sm font-medium" placeholder="name@string.education" />
+                        </SpotlightInput>
+                      </div>
+                      <button type="submit" disabled={isLoading} className="w-full bg-[#ed3b91] hover:bg-[#d6257a] text-white font-semibold py-3 rounded-xl transition-all shadow-md hover:shadow-lg active:scale-[0.99] flex items-center justify-center gap-2 text-sm">
+                        {isLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <>Send Reset Link <ArrowRight size={16} /></>}
+                      </button>
+                    </form>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center text-center pt-4">
+                    <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-6 text-green-500">
+                      <CheckCircle2 size={40} />
+                    </div>
+                    <h1 className="text-2xl font-bold tracking-tight text-[#091e42] mb-3">Check your email</h1>
+                    <p className="text-[#6882a9] text-sm leading-relaxed mb-8 max-w-[280px]">
+                      We've sent password reset instructions to <span className="font-semibold text-[#091e42]">{forgotEmail}</span>.
+                    </p>
+                    <button onClick={() => { changeView('login'); setForgotSubmitted(false); }} className="text-sm font-semibold text-[#08b8fb] hover:underline">
+                      Back to Login
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ═══════════ REGISTER SELECTION ═══════════ */}
+            {view === 'register-select' && (
+              <div className="animate-entry">
+                <button onClick={() => changeView('login')} className="flex items-center gap-1 text-[#6882a9] hover:text-[#091e42] text-xs font-semibold mb-6 transition-colors">
+                  <ArrowLeft size={14} /> Back to Login
+                </button>
+                <h1 className="text-3xl font-bold tracking-tight text-[#091e42] mb-2">Create Account</h1>
+                <p className="text-[#6882a9] text-sm mb-8">How will you be using String?</p>
+
+                <div className="space-y-4">
+                  <SpotlightInput as="button" onClick={() => changeView('register-create')} className="w-full text-left p-5 hover:border-[#ed3b91]/30 hover:shadow-md transition-all">
+                    <div className="flex items-start gap-4">
+                      <div className="w-10 h-10 rounded-full bg-[#ed3b91]/10 flex items-center justify-center shrink-0 text-[#ed3b91]">
+                        <School size={20} />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-[#091e42] text-sm mb-1">Create a New School</h3>
+                        <p className="text-xs text-[#6882a9] leading-relaxed">I am an <span className="text-[#091e42] font-semibold">Admin or Teacher</span> setting up a new String workspace.</p>
+                      </div>
+                      <ChevronRight size={16} className="text-[#6882a9] ml-auto mt-1" />
+                    </div>
+                  </SpotlightInput>
+
+                  <SpotlightInput as="button" onClick={() => changeView('register-join')} className="w-full text-left p-5 hover:border-[#08b8fb]/30 hover:shadow-md transition-all">
+                    <div className="flex items-start gap-4">
+                      <div className="w-10 h-10 rounded-full bg-[#08b8fb]/10 flex items-center justify-center shrink-0 text-[#08b8fb]">
+                        <Users size={20} />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-[#091e42] text-sm mb-1">Join an Existing School</h3>
+                        <p className="text-xs text-[#6882a9] leading-relaxed">I am a <span className="text-[#091e42] font-semibold">Student or Teacher</span> joining a school on String.</p>
+                      </div>
+                      <ChevronRight size={16} className="text-[#6882a9] ml-auto mt-1" />
+                    </div>
+                  </SpotlightInput>
                 </div>
               </div>
+            )}
 
-              {/* Password Input */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium text-slate-600">
-                    Password
-                  </label>
-                  <Link
-                    to="/forgot-password"
-                    className="text-sm font-medium text-[#08B8FB] hover:text-[#0799d6] transition-colors"
-                  >
-                    Forgot?
-                  </Link>
-                </div>
-                <div className="relative">
-                  <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
-                    </svg>
+            {/* ═══════════ REGISTER: CREATE NEW ORG ═══════════ */}
+            {view === 'register-create' && (
+              <div className="animate-entry pb-12">
+                <button onClick={() => changeView('register-select')} className="flex items-center gap-1 text-[#6882a9] hover:text-[#091e42] text-xs font-semibold mb-6 transition-colors">
+                  <ArrowLeft size={14} /> Back
+                </button>
+                <h1 className="text-2xl font-bold tracking-tight text-[#091e42] mb-2">Start your journey</h1>
+                <p className="text-[#6882a9] text-sm mb-6">Create a workspace for your organization.</p>
+
+                <form onSubmit={handleRegister} className="space-y-4">
+                  {/* Organization Name */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-[#6882a9] ml-1">School / Organization Name <span className="text-[#ed3b91]">*</span></label>
+                    <SpotlightInput>
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6882a9]"><Building2 size={16} /></div>
+                      <input type="text" required value={orgName} onChange={(e) => setOrgName(e.target.value)} className="w-full bg-transparent text-[#091e42] pl-10 pr-4 py-3 rounded-xl outline-none placeholder:text-[#6882a9]/60 text-sm font-medium" placeholder="e.g. Al-Khader Schools" />
+                    </SpotlightInput>
                   </div>
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    className="w-full pl-11 pr-12 py-3.5 text-sm rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-slate-300 focus:ring-4 focus:ring-slate-100 outline-none transition-all"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                  >
-                    {showPassword ? (
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
-                      </svg>
-                    ) : (
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                      </svg>
-                    )}
+
+                  {/* Full Name */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-[#6882a9] ml-1">Full Name <span className="text-[#ed3b91]">*</span></label>
+                    <SpotlightInput hasError={!!errors.name}>
+                      <input type="text" required value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full bg-transparent text-[#091e42] px-4 py-3 rounded-xl outline-none placeholder:text-[#6882a9]/60 text-sm font-medium" placeholder="Enter name" />
+                    </SpotlightInput>
+                    {errors.name && <p className="text-[10px] text-red-500 font-medium flex items-center gap-1 pl-1"><AlertCircle size={10} /> {errors.name}</p>}
+                  </div>
+
+                  {/* Work Email */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-[#6882a9] ml-1">Work Email <span className="text-[#ed3b91]">*</span></label>
+                    <SpotlightInput hasError={!!errors.email}>
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6882a9]"><Mail size={16} /></div>
+                      <input type="email" required value={regEmail} onChange={(e) => setRegEmail(e.target.value)} className="w-full bg-transparent text-[#091e42] pl-10 pr-4 py-3 rounded-xl outline-none placeholder:text-[#6882a9]/60 text-sm font-medium" placeholder="admin@school.edu" />
+                    </SpotlightInput>
+                    {errors.email && <p className="text-[10px] text-red-500 font-medium flex items-center gap-1 pl-1"><AlertCircle size={10} /> {errors.email}</p>}
+                  </div>
+
+                  {/* Phone with Country Code */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-[#6882a9] ml-1">Your Phone <span className="text-[#ed3b91]">*</span></label>
+                    <div className="flex gap-2">
+                      <div className="relative w-28 shrink-0">
+                        <SpotlightInput className="h-full" as="div">
+                          <button type="button" onClick={() => setIsCountryDropdownOpen(!isCountryDropdownOpen)} className="w-full h-full flex items-center justify-between px-3 bg-transparent text-[#091e42] text-sm font-medium outline-none py-3">
+                            <span className="text-lg">{selectedCountry.flag}</span>
+                            <span>{selectedCountry.dial}</span>
+                            <ChevronDown size={14} className="text-[#6882a9]" />
+                          </button>
+                        </SpotlightInput>
+                        {isCountryDropdownOpen && (
+                          <div className="absolute top-full left-0 mt-2 w-48 bg-white border border-slate-100 rounded-xl shadow-xl z-50 overflow-hidden animate-entry py-1">
+                            {COUNTRY_CODES.map((country) => (
+                              <button key={country.code} type="button" onClick={() => { setSelectedCountry(country); setIsCountryDropdownOpen(false); }} className="w-full flex items-center gap-3 px-4 py-2 hover:bg-slate-50 transition-colors text-left">
+                                <span className="text-lg">{country.flag}</span>
+                                <div className="flex flex-col">
+                                  <span className="text-xs font-bold text-[#091e42]">{country.name}</span>
+                                  <span className="text-[10px] text-[#6882a9]">{country.dial}</span>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div className="grow">
+                        <SpotlightInput hasError={!!errors.phone}>
+                          <input type="tel" required value={regPhone} onChange={(e) => setRegPhone(e.target.value)} className="w-full bg-transparent text-[#091e42] px-4 py-3 rounded-xl outline-none placeholder:text-[#6882a9]/60 text-sm font-medium" placeholder="79 000 0000" />
+                        </SpotlightInput>
+                      </div>
+                    </div>
+                    {errors.phone && <p className="text-[10px] text-red-500 font-medium flex items-center gap-1 pl-1"><AlertCircle size={10} /> {errors.phone}</p>}
+                  </div>
+
+                  {/* Password */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-[#6882a9] ml-1">Password <span className="text-[#ed3b91]">*</span></label>
+                    <SpotlightInput hasError={!!errors.password}>
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6882a9]"><Lock size={16} /></div>
+                      <input type={showRegPassword ? 'text' : 'password'} required value={regPassword} onChange={(e) => setRegPassword(e.target.value)} className="w-full bg-transparent text-[#091e42] pl-10 pr-10 py-3 rounded-xl outline-none placeholder:text-[#6882a9]/60 text-sm font-medium" placeholder="••••••••••••" />
+                      <button type="button" onClick={() => setShowRegPassword(!showRegPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6882a9] hover:text-[#091e42]"><Eye size={16} /></button>
+                    </SpotlightInput>
+                  </div>
+
+                  {/* Retype Password */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-[#6882a9] ml-1">Retype Password <span className="text-[#ed3b91]">*</span></label>
+                    <SpotlightInput hasError={!!errors.password}>
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6882a9]"><Lock size={16} /></div>
+                      <input type="password" required value={regConfirmPassword} onChange={(e) => setRegConfirmPassword(e.target.value)} className="w-full bg-transparent text-[#091e42] pl-10 pr-4 py-3 rounded-xl outline-none placeholder:text-[#6882a9]/60 text-sm font-medium" placeholder="Retype password" />
+                    </SpotlightInput>
+                    {errors.password && <p className="text-[10px] text-red-500 font-medium flex items-center gap-1 pl-1"><AlertCircle size={10} /> {errors.password}</p>}
+                  </div>
+
+                  <button type="submit" disabled={isLoading} className="w-full bg-[#ed3b91] hover:bg-[#d6257a] text-white font-semibold py-3 rounded-xl transition-all shadow-md hover:shadow-lg active:scale-[0.99] flex items-center justify-center gap-2 text-sm mt-4">
+                    {isLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <>Create Workspace <Rocket size={16} /></>}
+                  </button>
+                  <p className="text-[10px] text-[#6882a9] text-center px-4">By clicking create, you agree to our Terms of Service and Privacy Policy.</p>
+                </form>
+              </div>
+            )}
+
+            {/* ═══════════ EMAIL CONFIRMATION ═══════════ */}
+            {view === 'email-confirmation' && (
+              <div className="animate-entry flex flex-col items-center text-center pt-8">
+                <div className="w-20 h-20 bg-[#ed3b91]/10 rounded-full flex items-center justify-center mb-6 text-[#ed3b91]">
+                  <Mail size={40} />
+                </div>
+                <h1 className="text-2xl font-bold tracking-tight text-[#091e42] mb-3">Check your inbox</h1>
+                <p className="text-[#6882a9] text-sm leading-relaxed mb-8 max-w-[280px]">
+                  We've sent a confirmation link to <span className="font-semibold text-[#091e42]">{regEmail}</span>. Please verify your email to start using String.
+                </p>
+                <div className="space-y-3 w-full">
+                  <button className="w-full bg-[#091e42] hover:bg-[#08b8fb] text-white font-semibold py-3 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-sm">
+                    Open Email App
+                  </button>
+                  <button onClick={() => changeView('login')} className="w-full text-[#6882a9] hover:text-[#091e42] font-semibold py-3 text-sm">
+                    Back to Login
+                  </button>
+                </div>
+                <div className="mt-8 pt-6 border-t border-slate-100 w-full">
+                  <p className="text-xs text-[#6882a9]">Didn't receive it? <button className="text-[#ed3b91] font-bold hover:underline">Resend Email</button></p>
+                </div>
+              </div>
+            )}
+
+            {/* ═══════════ JOIN EXISTING ═══════════ */}
+            {view === 'register-join' && (
+              <div className="animate-entry">
+                <button onClick={() => changeView('register-select')} className="flex items-center gap-1 text-[#6882a9] hover:text-[#091e42] text-xs font-semibold mb-6 transition-colors">
+                  <ArrowLeft size={14} /> Back
+                </button>
+                <div className="text-center space-y-4 mb-8">
+                  <div className="w-16 h-16 bg-[#f0f9ff] rounded-full flex items-center justify-center mx-auto text-[#08b8fb]">
+                    <Mail size={32} />
+                  </div>
+                  <div>
+                    <h1 className="text-2xl font-bold tracking-tight text-[#091e42] mb-2">Check your invite</h1>
+                    <p className="text-[#6882a9] text-sm leading-relaxed">
+                      To join an existing school, you need an <strong>Invite Link</strong> or a <strong>Class Code</strong> from your administrator or teacher.
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <button onClick={() => { changeView('login'); setLoginMethod('code'); }} className="w-full bg-[#091e42] hover:bg-[#08b8fb] text-white font-semibold py-3 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-sm">
+                    I have a Class Code
+                  </button>
+                  <button className="w-full bg-white border border-slate-200 hover:border-[#ed3b91] hover:text-[#ed3b91] text-[#6882a9] font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-sm">
+                    I need to find my school
                   </button>
                 </div>
               </div>
+            )}
 
-              {/* Log In Button */}
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full mt-6 py-3.5 rounded-xl text-white font-semibold text-sm inline-flex items-center justify-center gap-2 transition-all duration-200 shadow-lg shadow-pink-500/30 hover:shadow-xl hover:shadow-pink-500/40 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
-                style={{
-                  background: 'linear-gradient(135deg, #ff4da6 0%, #ED3B91 100%)'
-                }}
-              >
-                {isSubmitting ? 'Signing in...' : 'Log In'}
-                {!isSubmitting && (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-                  </svg>
-                )}
-              </button>
-            </form>
-          )}
-
-          {/* Class Code Login */}
-          {loginMethod === 'class-code' && (
-            <div className="py-12 text-center">
-              <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 8.25h15m-16.5 7.5h15m-1.8-13.5-3.9 19.5m-2.1-19.5-3.9 19.5" />
-                </svg>
-              </div>
-              <p className="text-sm text-slate-500">Class Code login coming soon</p>
-            </div>
-          )}
-
-          {/* QR Login */}
-          {loginMethod === 'qr' && (
-            <div className="py-12 text-center">
-              <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 3.75 9.375v-4.5ZM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5ZM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 13.5 9.375v-4.5Z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75ZM6.75 16.5h.75v.75h-.75v-.75ZM16.5 6.75h.75v.75h-.75v-.75ZM13.5 13.5h.75v.75h-.75v-.75ZM13.5 19.5h.75v.75h-.75v-.75ZM19.5 13.5h.75v.75h-.75v-.75ZM19.5 19.5h.75v.75h-.75v-.75ZM16.5 16.5h.75v.75h-.75v-.75Z" />
-                </svg>
-              </div>
-              <p className="text-sm text-slate-500">QR Code login coming soon</p>
-            </div>
-          )}
-
-          {/* Login Method Tabs */}
-          <div className="mt-8 pt-6 border-t border-slate-100">
-            <div className="flex items-center justify-center gap-6">
-              <button
-                onClick={() => setLoginMethod('email')}
-                className={`text-sm font-medium pb-1 transition-all ${
-                  loginMethod === 'email'
-                    ? 'text-[#08B8FB] border-b-2 border-[#08B8FB]'
-                    : 'text-slate-400 hover:text-slate-600'
-                }`}
-              >
-                Email Login
-              </button>
-              <button
-                onClick={() => setLoginMethod('class-code')}
-                className={`text-sm font-medium pb-1 transition-all ${
-                  loginMethod === 'class-code'
-                    ? 'text-[#08B8FB] border-b-2 border-[#08B8FB]'
-                    : 'text-slate-400 hover:text-slate-600'
-                }`}
-              >
-                Class Code
-              </button>
-              <button
-                onClick={() => setLoginMethod('qr')}
-                className={`text-sm font-medium pb-1 transition-all ${
-                  loginMethod === 'qr'
-                    ? 'text-[#08B8FB] border-b-2 border-[#08B8FB]'
-                    : 'text-slate-400 hover:text-slate-600'
-                }`}
-              >
-                QR Login
-              </button>
-            </div>
           </div>
+          <div className="pb-4 shrink-0"></div>
+        </div>
 
-          {/* Register Link */}
-          <div className="mt-6 text-center">
-            <p className="text-sm text-slate-500">
-              New to String?{' '}
-              <Link
-                to="/register"
-                className="font-semibold text-[#ED3B91] hover:text-[#d63482] transition-colors"
-              >
-                Register
-              </Link>
-            </p>
+        {/* --- RIGHT SIDE: Art Panel --- */}
+        <div className="hidden lg:flex lg:w-[60%] xl:w-[65%] relative bg-[#F8FAFC] overflow-hidden flex-col items-center justify-center p-12 h-screen">
+          <div className="absolute inset-0 opacity-[0.6]" style={{ backgroundImage: `linear-gradient(#E2E8F0 1px, transparent 1px), linear-gradient(90deg, #E2E8F0 1px, transparent 1px)`, backgroundSize: '50px 50px' }}></div>
+          <NeuroNetworkCanvas />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-white/60 pointer-events-none" />
+
+          <div className="relative z-10 w-full max-w-xl space-y-10 transition-all duration-500">
+            <div className="space-y-6">
+              <div className={`w-16 h-16 rounded-2xl bg-white shadow-xl shadow-slate-200/50 flex items-center justify-center ring-1 ring-slate-100 animate-entry ${view !== 'login' ? 'text-[#08b8fb]' : 'text-[#ed3b91]'}`}>
+                {view !== 'login' ? <Rocket className="w-8 h-8" /> : <Command className="w-8 h-8" />}
+              </div>
+
+              {view !== 'login' ? (
+                <h2 className="text-5xl xl:text-6xl font-bold text-[#091e42] tracking-tight leading-[1.1] animate-entry delay-100">
+                  Join the <span className="text-[#08b8fb]">education revolution</span> today.
+                </h2>
+              ) : (
+                <h2 className="text-5xl xl:text-6xl font-bold text-[#091e42] tracking-tight leading-[1.1] animate-entry delay-100">
+                  The <span className="text-[#ed3b91]">operating system</span> for modern education.
+                </h2>
+              )}
+            </div>
+
+            {/* Testimonial Card */}
+            <div className="bg-white/70 backdrop-blur-md border border-white/60 p-6 pr-10 rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] ring-1 ring-slate-900/5 transform transition-all hover:scale-[1.01] animate-entry delay-200">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 shrink-0 rounded-full bg-gradient-to-tr from-[#ed3b91] to-[#d6257a] p-0.5">
+                  <div className="w-full h-full bg-white rounded-full flex items-center justify-center overflow-hidden">
+                    <span className="font-bold text-[#ed3b91] text-sm">
+                      {view === 'login' ? 'DA' : 'MD'}
+                    </span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {view === 'login' ? (
+                    <>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-bold text-[#091e42] text-lg">Dr. Jihad Al-Kiswani</h4>
+                          <CheckCircle2 size={16} className="text-[#08b8fb] fill-[#08b8fb]/10" />
+                        </div>
+                        <p className="text-sm text-[#6882a9] font-medium">Principal, Al-Khader Schools</p>
+                      </div>
+                      <p className="text-lg text-[#091e42] leading-relaxed font-medium">
+                        "String isn't just a 'better LMS'—it's a whole new category. It allowed us to stop paying for 9 different tools, gave our teachers back 10 hours a week, and doubled our student engagement."
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-bold text-[#091e42] text-lg">Maha Darwish</h4>
+                          <CheckCircle2 size={16} className="text-[#08b8fb] fill-[#08b8fb]/10" />
+                        </div>
+                        <p className="text-sm text-[#6882a9] font-medium">CEO, Inbdaa Foundation for Talented Students</p>
+                      </div>
+                      <p className="text-lg text-[#091e42] leading-relaxed font-medium">
+                        "String empowers us to identify and nurture potential like never before. It's not just a tool; it's a partner in shaping the future of our most talented students."
+                      </p>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4 opacity-80 animate-entry delay-300">
+              <span className="flex items-center gap-2 text-sm font-semibold text-[#6882a9] bg-white/50 px-3 py-1 rounded-full border border-slate-200">
+                <span className="w-2 h-2 rounded-full bg-[#ed3b91]" /> 99.9% Uptime
+              </span>
+              <span className="flex items-center gap-2 text-sm font-semibold text-[#6882a9] bg-white/50 px-3 py-1 rounded-full border border-slate-200">
+                <Command size={12} /> SOC2 Compliant
+              </span>
+            </div>
           </div>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import type { ResourceVideo } from '../../data/resourceVideos';
 import { TutorialCard } from './TutorialCard';
+import { COLORS } from '../../theme/colors';
 
 /* ═══════════════════════════════════════════════════
    TutorialCarousel — horizontal scroll with arrows
@@ -9,9 +10,9 @@ import { TutorialCard } from './TutorialCard';
    Mobile: 1 card, native swipe via scroll-snap.
    ═══════════════════════════════════════════════════ */
 
-const PINK = '#EC4899';
-const PINK_HOVER = '#DB2777';
-const PINK_ACTIVE = '#BE185D';
+const PINK = COLORS.primary;
+const PINK_HOVER = COLORS.primaryHover;
+const PINK_ACTIVE = COLORS.primaryActive;
 const GAP = 20;
 
 interface TutorialCarouselProps {
@@ -77,7 +78,7 @@ export const TutorialCarousel: React.FC<TutorialCarouselProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: '0 4px 16px rgba(236,72,153,0.35)',
+    boxShadow: '0 4px 16px rgba(237,59,145,0.35)',
     transition: 'background 0.2s, transform 0.2s, box-shadow 0.2s',
   };
 
@@ -87,12 +88,12 @@ export const TutorialCarousel: React.FC<TutorialCarouselProps> = ({
       <div style={{ textAlign: 'center', marginBottom: 36 }}>
         <h2 style={{
           fontSize: 'clamp(1.5rem, 3vw, 2rem)',
-          fontWeight: 800, color: '#0f172a', marginBottom: 8, lineHeight: 1.2,
+          fontWeight: 800, color: COLORS.neutral, marginBottom: 8, lineHeight: 1.2,
         }}>
           {heading}
         </h2>
         {subtitle && (
-          <p style={{ fontSize: 15, color: '#64748b', maxWidth: 500, margin: '0 auto' }}>
+          <p style={{ fontSize: 15, color: COLORS.neutralLight, maxWidth: 500, margin: '0 auto' }}>
             {subtitle}
           </p>
         )}

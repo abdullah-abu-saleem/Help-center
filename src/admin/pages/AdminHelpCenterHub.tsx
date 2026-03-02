@@ -250,7 +250,7 @@ export default function AdminHelpCenterHub() {
         <div className="flex items-center gap-1 mb-6 glass-card rounded-xl p-1 w-fit">
           <Link
             to="/admin/help-center/categories"
-            className="px-5 py-2 text-sm font-semibold bg-indigo-600 text-white rounded-lg shadow-sm"
+            className="px-5 py-2 text-sm font-semibold bg-[#ed3b91] text-white rounded-lg shadow-sm"
           >
             Categories
           </Link>
@@ -291,7 +291,7 @@ export default function AdminHelpCenterHub() {
           <Link
             to="/admin/help-center/category/new"
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-sm font-semibold transition-all hover:scale-[1.02] active:scale-[0.98]"
-            style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
+            style={{ background: 'linear-gradient(135deg, #ed3b91, #d6257a)' }}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -321,7 +321,7 @@ export default function AdminHelpCenterHub() {
                 onClick={() => setFilterActive(f)}
                 className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                   filterActive === f
-                    ? 'bg-indigo-100 text-indigo-700'
+                    ? 'bg-primary-100 text-primary-700'
                     : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
                 }`}
               >
@@ -340,7 +340,7 @@ export default function AdminHelpCenterHub() {
 
         {loading ? (
           <div className="text-center py-20">
-            <div className="w-8 h-8 border-2 border-slate-200 border-t-indigo-500 rounded-full animate-spin mx-auto mb-4" />
+            <div className="w-8 h-8 border-2 border-slate-200 border-t-primary-500 rounded-full animate-spin mx-auto mb-4" />
             <p className="text-sm text-slate-500">Loading categories...</p>
           </div>
         ) : filtered.length === 0 ? (
@@ -356,7 +356,7 @@ export default function AdminHelpCenterHub() {
             {!search && filterActive === 'all' && (
               <Link
                 to="/admin/help-center/category/new"
-                className="text-sm font-semibold text-indigo-600 hover:text-indigo-800"
+                className="text-sm font-semibold text-primary-500 hover:text-primary-800"
               >
                 Create your first category
               </Link>
@@ -407,7 +407,7 @@ export default function AdminHelpCenterHub() {
                   type="text"
                   value={editForm.title}
                   onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 transition-all"
                 />
               </div>
 
@@ -419,7 +419,7 @@ export default function AdminHelpCenterHub() {
                   dir="rtl"
                   value={editForm.title_ar}
                   onChange={(e) => setEditForm((f) => ({ ...f, title_ar: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 transition-all"
                 />
               </div>
 
@@ -430,7 +430,7 @@ export default function AdminHelpCenterHub() {
                   rows={2}
                   value={editForm.description}
                   onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all resize-none"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 transition-all resize-none"
                 />
               </div>
 
@@ -442,7 +442,7 @@ export default function AdminHelpCenterHub() {
                   dir="rtl"
                   value={editForm.description_ar}
                   onChange={(e) => setEditForm((f) => ({ ...f, description_ar: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all resize-none"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 transition-all resize-none"
                 />
               </div>
 
@@ -455,7 +455,7 @@ export default function AdminHelpCenterHub() {
                     value={editForm.icon}
                     onChange={(e) => setEditForm((f) => ({ ...f, icon: e.target.value }))}
                     placeholder="e.g. folder"
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 transition-all"
                   />
                 </div>
                 <div>
@@ -464,7 +464,7 @@ export default function AdminHelpCenterHub() {
                     type="number"
                     value={editForm.sort_order}
                     onChange={(e) => setEditForm((f) => ({ ...f, sort_order: Number(e.target.value) || 0 }))}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 transition-all"
                   />
                 </div>
               </div>
@@ -475,7 +475,7 @@ export default function AdminHelpCenterHub() {
                   type="checkbox"
                   checked={editForm.is_published}
                   onChange={(e) => setEditForm((f) => ({ ...f, is_published: e.target.checked }))}
-                  className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  className="w-4 h-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
                 />
                 <span className="text-sm font-medium text-slate-700">Published</span>
               </label>
@@ -493,7 +493,7 @@ export default function AdminHelpCenterHub() {
                 onClick={handleEditSave}
                 disabled={editSaving}
                 className="px-5 py-2 text-sm font-semibold text-white rounded-lg transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
-                style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
+                style={{ background: 'linear-gradient(135deg, #ed3b91, #d6257a)' }}
               >
                 {editSaving ? 'Saving\u2026' : 'Save'}
               </button>
