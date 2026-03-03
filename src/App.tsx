@@ -60,8 +60,8 @@ function App() {
 
         <div className="relative z-10">
         <Routes>
-          {/* Root → Resources landing page */}
-          <Route path="/" element={<ResourcesLanding />} />
+          {/* Root → redirect to Help Center */}
+          <Route path="/" element={<Navigate to="/help" replace />} />
 
           <Route path="/help" element={<Home />} />
           <Route path="/help/search" element={<SearchPage />} />
