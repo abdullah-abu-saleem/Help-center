@@ -9,25 +9,12 @@ import { SpotlightCard } from '../components/ui/SpotlightCard';
 import { COLORS } from '../theme/colors';
 
 const ROUTE_DEBUG = false;
+const COMING_SOON_SLUGS = ['for-families', 'for-schools-and-districts'];
 
 /* ═══════════════════════════════════════════════════════
    Category cards configuration
    ═══════════════════════════════════════════════════════ */
 const mainCategories = [
-  {
-    slug: 'for-families',
-    titleKey: 'forFamilies' as const,
-    descKey: 'forFamiliesDesc' as const,
-    gradient: 'from-cyan-500 to-blue-500',
-    iconBg: 'bg-gradient-to-br from-cyan-50 to-sky-100',
-    iconColor: 'text-cyan-600',
-    accentColor: '#06b6d4',
-    icon: (
-      <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
-      </svg>
-    ),
-  },
   {
     slug: 'for-students',
     titleKey: 'forStudents' as const,
@@ -67,6 +54,20 @@ const mainCategories = [
     icon: (
       <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
+      </svg>
+    ),
+  },
+  {
+    slug: 'for-families',
+    titleKey: 'forFamilies' as const,
+    descKey: 'forFamiliesDesc' as const,
+    gradient: 'from-cyan-500 to-blue-500',
+    iconBg: 'bg-gradient-to-br from-cyan-50 to-sky-100',
+    iconColor: 'text-cyan-600',
+    accentColor: '#06b6d4',
+    icon: (
+      <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
       </svg>
     ),
   },
@@ -239,7 +240,9 @@ export default function Home() {
           className="relative z-10 mx-auto px-6 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4"
           style={{ maxWidth: 1200, gap: 24 }}
         >
-          {mainCategories.map((cat, idx) => (
+          {mainCategories.map((cat, idx) => {
+            const isComingSoon = COMING_SOON_SLUGS.includes(cat.slug);
+            return (
             <Link
               key={cat.slug}
               to={`/help/category/${cat.slug}`}
@@ -248,6 +251,7 @@ export default function Home() {
                 minHeight: 270,
                 animationDelay: `${0.1 + idx * 0.08}s`,
                 textDecoration: 'none',
+                position: 'relative',
               }}
             >
               <SpotlightCard className="flex flex-col h-full">
@@ -304,8 +308,45 @@ export default function Home() {
                 </div>
               </div>
               </SpotlightCard>
+              {isComingSoon && (
+                <div
+                  aria-label={t('comingSoon' as any)}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    right: 0,
+                    bottom: 0,
+                    left: 0,
+                    overflow: 'hidden',
+                    borderRadius: 'var(--radius-2xl)',
+                    pointerEvents: 'none',
+                    zIndex: 50,
+                  }}
+                >
+                  <div style={{
+                    position: 'absolute',
+                    top: 'var(--space-5)',
+                    right: '-52px',
+                    width: '190px',
+                    textAlign: 'center' as const,
+                    transform: 'rotate(45deg)',
+                    zIndex: 50,
+                    padding: 'var(--space-2) 0',
+                    background: 'linear-gradient(90deg, var(--color-primary-500), var(--color-primary-600))',
+                    color: 'var(--color-bg-surface)',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    letterSpacing: '0.5px',
+                    lineHeight: 1.4,
+                    boxShadow: 'var(--shadow-md)',
+                  }}>
+                    {t('comingSoon' as any)}
+                  </div>
+                </div>
+              )}
             </Link>
-          ))}
+            );
+          })}
         </div>
       </section>
 

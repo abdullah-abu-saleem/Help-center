@@ -28,6 +28,14 @@ export default function HelpCenterHome() {
   const localized = (en: string, ar: string | null) =>
     lang === 'ar' && ar ? ar : en;
 
+  // Visual ordering of cards (does not modify data)
+  const SLUG_ORDER = ['for-students', 'for-teachers', 'for-schools-and-districts', 'for-families'];
+  const sortedCategories = [...categories].sort((a, b) => {
+    const ai = SLUG_ORDER.indexOf(a.slug);
+    const bi = SLUG_ORDER.indexOf(b.slug);
+    return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+  });
+
   return (
     <Layout>
       <HelpCenterShell noBg>
@@ -84,7 +92,7 @@ export default function HelpCenterHome() {
                 className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
                 style={{ gap: 24 }}
               >
-                {categories.map((cat, idx) => (
+                {sortedCategories.map((cat, idx) => (
                   <Link
                     key={cat.id}
                     to={`/help-center/${cat.slug}`}
@@ -102,6 +110,8 @@ export default function HelpCenterHome() {
                         backdropFilter: 'blur(16px)',
                         WebkitBackdropFilter: 'blur(16px)',
                         minHeight: 200,
+                        position: 'relative',
+                        overflow: 'hidden',
                       }}
                     >
                       <div style={{ padding: '28px 28px 32px' }}>
