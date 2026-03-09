@@ -257,6 +257,8 @@ export const ar = {
   tVid12Desc: "شرح خطوة بخطوة لطريقة إنشاء صف دراسي في منصة String.",
   tVid13Title: "انشاء صف دراسي عبر تعبئة الفورمات",
   tVid13Desc: "كيفية إنشاء صف دراسي عن طريق تعبئة النموذج المطلوب.",
+  tVid14Title: "كيفية إضافة الاجتماع في تطبيق K12",
+  tVid14Desc: "تعلّم كيفية إضافة اجتماع في تطبيق K12.",
 
   // Student Resources page
   resStudentBadge: "للطلاب",
@@ -329,6 +331,7 @@ export const ar = {
   "videos.creatingSeries": "إنشاء سلسلة تعليمية",
   "videos.creatingClassroomOnPlatform": "String شرح طريقة انشاء صف دراسي في منصة",
   "videos.creatingClassroomByForm": "انشاء صف دراسي عبر تعبئة الفورمات",
+  "videos.addingMeetingInK12": "كيفية إضافة الاجتماع في تطبيق K12",
 
   // Card ribbon labels
   "ribbon.student": "حساب الطالب",

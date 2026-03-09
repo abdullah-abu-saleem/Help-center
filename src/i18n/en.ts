@@ -257,6 +257,8 @@ export const en = {
   tVid12Desc: "Step-by-step guide on how to create a classroom on the String platform.",
   tVid13Title: "Creating a Classroom by Filling Out the Form",
   tVid13Desc: "How to create a classroom by filling out the required form.",
+  tVid14Title: "How to Add a Meeting in the K12 App",
+  tVid14Desc: "Learn how to add a meeting in the K12 App.",
 
   // Student Resources page
   resStudentBadge: "For Students",
@@ -329,6 +331,7 @@ export const en = {
   "videos.creatingSeries": "Creating a Series",
   "videos.creatingClassroomOnPlatform": "String – How to Create a Classroom on the Platform",
   "videos.creatingClassroomByForm": "Creating a Classroom by Filling Out the Form",
+  "videos.addingMeetingInK12": "How to Add a Meeting in the K12 App",
 
   // Card ribbon labels
   "ribbon.student": "Student Account",

@@ -44,6 +44,7 @@ const TITLE_KEY_MAP: Record<string, string> = {
   "Virtual Classrooms": "virtualClassrooms",
   "String – How to Create a Classroom on the Platform": "creatingClassroomOnPlatform",
   "Creating a Classroom by Filling Out the Form": "creatingClassroomByForm",
+  "How to Add a Meeting in the K12 App": "addingMeetingInK12",
 };
 
 /** Look up the i18n titleKey for a given English title. */
@@ -66,6 +67,7 @@ export const TEACHER_VIDEOS: RawVideo[] = [
   { id: 't11', url: 'https://www.youtube.com/watch?v=5oIGW2mUI1g&list=PLkAvXM4rJZpHxX1DC6seelaWLd_qPj01i&index=11',  titleKey: 'tVid11Title', descKey: 'tVid11Desc' },
   { id: 't12', url: 'https://www.youtube.com/watch?v=xRndg5oameE',  titleKey: 'tVid12Title', descKey: 'tVid12Desc' },
   { id: 't13', url: 'https://www.youtube.com/watch?v=UFfvyS2VHIc',  titleKey: 'tVid13Title', descKey: 'tVid13Desc' },
+  { id: 't14', url: 'https://www.youtube.com/watch?v=05CN6C58zgU',  titleKey: 'tVid14Title', descKey: 'tVid14Desc' },
 ];
 
 /* ── Student videos (7) ── */

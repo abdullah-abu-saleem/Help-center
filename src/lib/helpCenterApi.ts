@@ -415,7 +415,7 @@ export async function searchHcArticles(query: string): Promise<HcArticle[]> {
 
 /** Fetch published resource videos by section (public).
  *  Safe fallback: if is_published column is missing, retries without it.
- *  Sorts by created_at DESC (newest first). */
+ *  Sorts by sort_order ASC. */
 export async function getHcResourceVideos(section: 'teacher' | 'student'): Promise<HcResourceVideo[]> {
   console.log('[helpCenterApi] getHcResourceVideos:', section);
   const { data, error } = await supabasePublic
@@ -423,7 +423,7 @@ export async function getHcResourceVideos(section: 'teacher' | 'student'): Promi
     .select('*')
     .eq('section', section)
     .eq('is_published', true)
-    .order('created_at', { ascending: false });
+    .order('sort_order', { ascending: true });
 
   if (error) {
     // 42703 = undefined_column — is_published or created_at may not exist yet
